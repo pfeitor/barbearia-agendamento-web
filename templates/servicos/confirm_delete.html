@@ -1,0 +1,2 @@
+{% extends "base.html" %}
+{% block content %}<h2>Excluir serviço</h2><p>Confirma a exclusão de {{ object.nome }}?</p><form method="post">{% csrf_token %}<button type="submit">Confirmar</button></form>{% endblock %}

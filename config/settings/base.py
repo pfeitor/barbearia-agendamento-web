@@ -35,7 +35,6 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "config.urls"
-
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -66,9 +65,9 @@ LANGUAGE_CODE = "pt-br"
 USE_I18N = True
 USE_TZ = True
 TIME_ZONE = TIME_ZONE
-
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
-
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/accounts/login/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

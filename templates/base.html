@@ -1,24 +1,33 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}PI Barbearia{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body>
-  <header>
-    <h1>PI Barbearia</h1>
-    <nav>
-      <a href="/">Início</a> |
-      <a href="/clientes/">Clientes</a> |
-      <a href="/profissionais/">Profissionais</a> |
-      <a href="/servicos/">Serviços</a> |
-      <a href="/agendamentos/">Agendamentos</a>
-    </nav>
-    <hr>
-  </header>
-  <main>
-    {% block content %}{% endblock %}
-  </main>
+<header>
+  <h1>PI Barbearia</h1>
+  <nav>
+    <a href="/">Início</a>
+    <a href="/clientes/">Clientes</a>
+    <a href="/profissionais/">Profissionais</a>
+    <a href="/servicos/">Serviços</a>
+    <a href="/agendamentos/">Agendamentos</a>
+    <a href="/admin/">Admin</a>
+    {% if user.is_authenticated %}
+      <span>Olá, {{ user.username }}</span>
+      <form method="post" action="{% url 'logout' %}" style="display:inline;">{% csrf_token %}<button type="submit">Sair</button></form>
+    {% else %}
+      <a href="{% url 'login' %}">Entrar</a>
+    {% endif %}
+  </nav>
+</header>
+<main>
+  {% if messages %}<ul class="messages">{% for message in messages %}<li>{{ message }}</li>{% endfor %}</ul>{% endif %}
+  {% block content %}{% endblock %}
+</main>
 </body>
 </html>

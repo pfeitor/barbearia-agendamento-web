@@ -1,5 +1,6 @@
-from django.http import HttpResponse
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import TemplateView
 
 
-def home(request):
-    return HttpResponse("Projeto PI Barbearia em Django.")
+class HomeView(LoginRequiredMixin, TemplateView):
+    template_name = "core/home.html"

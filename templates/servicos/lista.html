@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Serviços</h2>
+<p><a class="button" href="{% url 'servicos_novo' %}">Novo serviço</a></p>
+<table>
+<tr><th>ID</th><th>Nome</th><th>Duração (min)</th><th>Preço</th><th>Ações</th></tr>
+{% for item in servicos %}
+<tr><td>{{ item.id }}</td><td>{{ item.nome }}</td><td>{{ item.duracao_minutos }}</td><td>{{ item.preco }}</td><td class="actions"><a href="{% url 'servicos_editar' item.pk %}">Editar</a> <a href="{% url 'servicos_excluir' item.pk %}">Excluir</a></td></tr>
+{% empty %}<tr><td colspan="5">Nenhum serviço cadastrado.</td></tr>{% endfor %}
+</table>
+{% endblock %}
