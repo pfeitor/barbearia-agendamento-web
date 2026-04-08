@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}PI Barbearia{% endblock %}</title>
+</head>
+<body>
+  <header>
+    <h1>PI Barbearia</h1>
+    <nav>
+      <a href="/">Início</a> |
+      <a href="/clientes/">Clientes</a> |
+      <a href="/profissionais/">Profissionais</a> |
+      <a href="/servicos/">Serviços</a> |
+      <a href="/agendamentos/">Agendamentos</a>
+    </nav>
+    <hr>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
