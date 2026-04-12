@@ -1,0 +1,126 @@
+# Análise do Projeto Barbearia Agendamento Web
+
+## Stack Detectada
+
+### Django e Python
+- **Django**: 5.1+ (especificado em requirements/base.txt como Django>=5.1,<6.1)
+- **Python**: 3.8+ (compatível com Django 5.1+)
+
+### Banco de Dados
+- **Desenvolvimento**: SQLite3 (db.sqlite3)
+- **Produção**: PostgreSQL (psycopg[binary] configurado via dj-database-url)
+- **Configuração**: Utiliza dj-database-url para gerenciamento de conexões
+
+### Plataforma de Deploy
+- **Render**: Configurado via render.yaml
+- **Web Server**: Gunicorn
+- **Static Files**: WhiteNoise middleware
+- **Build Command**: pip install -r requirements/prod.txt && python manage.py collectstatic --noinput
+
+### Estrutura de Pastas dos Apps
+```
+apps/
+  core/           - App principal (home)
+  clientes/       - Gestão de clientes
+  profissionais/  - Gestão de profissionais
+  servicos/       - Gestão de serviços
+  agendamentos/   - Gestão de agendamentos
+  notificacoes/   - Sistema de notificações
+```
+
+### Padrão de Views
+- **Class-Based Views (CBV)**: 100% das views utilizam CBV
+- **Views Comuns**: ListView, CreateView, UpdateView, DeleteView, TemplateView
+- **Mixins**: LoginRequiredMixin em todas as views de CRUD
+- **Messages**: Sistema de messages do Django para feedback ao usuário
+
+### Bibliotecas Relevantes (requirements/base.txt)
+- Django>=5.1,<6.1
+- dj-database-url>=2.2.0
+- gunicorn>=23.0.0
+- psycopg[binary]>=3.2.0
+- whitenoise>=6.7.0
+
+## Convenções a Adotar
+
+### 1. Type Hints
+- **Funções novas**: Sempre incluir type hints em parâmetros e retorno
+- **Exemplo**:
+  ```python
+  def processar_agendamento(agendamento: Agendamento) -> bool:
+      pass
+  ```
+
+### 2. Docstrings (Padrão Google)
+- **Funções e classes novas**: Docstrings no padrão Google Style
+- **Exemplo**:
+  ```python
+  def criar_cliente(nome: str, email: str) -> Cliente:
+      """Cria um novo cliente no sistema.
+      
+      Args:
+          nome: Nome completo do cliente.
+          email: Email válido do cliente.
+          
+      Returns:
+          Instância do cliente criado.
+          
+      Raises:
+          ValidationError: Se email já existir.
+      """
+      pass
+  ```
+
+### 3. Variáveis de Ambiente
+- **Gerenciamento**: Utilizar python-decouple (from decouple import config)
+- **Configuração**: Todas as variáveis sensíveis em .env
+- **Exemplo**:
+  ```python
+  SECRET_KEY = config('SECRET_KEY')
+  DEBUG = config('DEBUG', default=False, cast=bool)
+  ```
+
+### 4. Secrets no Código
+- **Regra**: NUNCA incluir secrets, chaves API ou dados sensíveis no código
+- **Uso**: Sempre via variáveis de ambiente
+- **Validação**: CI/CD deve bloquear commits com secrets
+
+### 5. Migrações
+- **Regra**: NUNCA editar migrações manualmente após commit
+- **Processo**: Gerar novas migrações para alterações
+- **Exceção**: Apenas em ambiente de desenvolvimento local sem versionamento
+
+### 6. Models - Padrões Obrigatórios
+- **__str__**: Sempre implementar método __str__ descritivo
+- **Meta class**: Sempre definir class Meta com:
+  - db_table: nome da tabela (snake_case)
+  - ordering: ordenação padrão
+  - verbose_name/verbose_name_plural (opcional)
+- **Exemplo**:
+  ```python
+  class Servico(models.Model):
+      nome = models.CharField(max_length=100)
+      preco = models.DecimalField(max_digits=10, decimal_places=2)
+      
+      class Meta:
+          db_table = "servico"
+          ordering = ["nome"]
+          
+      def __str__(self) -> str:
+          return f"{self.nome} - R${self.preco}"
+  ```
+
+## Padrões Existentes a Manter
+
+### Views
+- Continuar usando CBV com LoginRequiredMixin
+- Manter padrão de messages.success() em form_valid()
+- Usar reverse_lazy para URLs de sucesso
+
+### Models
+- Manter campos created_at com default=timezone.now
+- Usar CharField com unique=True para identificadores únicos
+
+### Configuração
+- Manter estrutura de settings dividida (base.py, dev.py, prod.py)
+- Continuar usando dj-database-url para configuração de banco
