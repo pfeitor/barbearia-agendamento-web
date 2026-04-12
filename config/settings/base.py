@@ -69,6 +69,19 @@ TIME_ZONE = TIME_ZONE
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+
+# Configurações de autenticação
+AUTHENTICATION_BACKENDS = [
+    'apps.core.backends.AdminEmailBackend',
+    'django.contrib.auth.backends.ModelBackend',  # Para Django Admin
+]
+
+# URLs de redirecionamento
+LOGIN_URL = "/login-cliente/"
 LOGIN_REDIRECT_URL = "/"
-LOGOUT_REDIRECT_URL = "/accounts/login/"
+LOGOUT_REDIRECT_URL = "/login-cliente/"
+
+# Handler para 403
+HANDLER403 = 'apps.core.views.permission_denied'
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

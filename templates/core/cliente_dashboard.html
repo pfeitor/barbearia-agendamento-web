@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Meus Agendamentos - PI Barbearia{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="welcome-section">
+        <h2>Bem-vindo(a), {{ cliente.nome }}!</h2>
+        <p>Gerencie seus agendamentos abaixo</p>
+    </div>
+    
+    <div class="actions-section">
+        <a href="{% url 'agendamentos_create' %}" class="btn btn-primary">
+            Novo Agendamento
+        </a>
+        <a href="{% url 'meus_dados' %}" class="btn btn-secondary">
+            Meus Dados
+        </a>
+        <a href="{% url 'logout_cliente' %}" class="btn btn-outline">
+            Sair
+        </a>
+    </div>
+    
+    <div class="agendamentos-section">
+        <h3>Meus Agendamentos</h3>
+        
+        {% if agendamentos %}
+            <div class="agendamentos-list">
+                {% for agendamento in agendamentos %}
+                    <div class="agendamento-card">
+                        <div class="agendamento-info">
+                            <h4>{{ agendamento.servico.nome }}</h4>
+                            <p><strong>Profissional:</strong> {{ agendamento.profissional.nome }}</p>
+                            <p><strong>Data e Hora:</strong> {{ agendamento.data_hora_inicio|date:"d/m/Y H:i" }}</p>
+                            <p><strong>Status:</strong> 
+                                <span class="status status-{{ agendamento.status|lower }}">
+                                    {{ agendamento.get_status_display }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="agendamento-actions">
+                            <a href="{% url 'agendamentos_editar' agendamento.id %}" class="btn btn-sm btn-secondary">
+                                Editar
+                            </a>
+                            <a href="{% url 'agendamentos_excluir' agendamento.id %}" class="btn btn-sm btn-danger">
+                                Cancelar
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>Você ainda não possui agendamentos.</p>
+                <a href="{% url 'agendamentos_create' %}" class="btn btn-primary">
+                    Fazer primeiro agendamento
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.dashboard-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.welcome-section {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.welcome-section h2 {
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.welcome-section p {
+    color: #666;
+    font-size: 18px;
+}
+
+.actions-section {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 12px 24px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+}
+
+.btn-outline {
+    background: transparent;
+    color: #dc3545;
+    border: 1px solid #dc3545;
+}
+
+.btn-outline:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 14px;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+.agendamentos-section h3 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.agendamentos-list {
+    display: grid;
+    gap: 20px;
+}
+
+.agendamento-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.agendamento-info h4 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.agendamento-info p {
+    margin-bottom: 5px;
+    color: #666;
+}
+
+.status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.status-agendado {
+    background: #ffc107;
+    color: #000;
+}
+
+.status-confirmado {
+    background: #28a745;
+    color: white;
+}
+
+.status-cancelado {
+    background: #dc3545;
+    color: white;
+}
+
+.status-concluido {
+    background: #6c757d;
+    color: white;
+}
+
+.agendamento-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.empty-state p {
+    margin-bottom: 20px;
+    color: #666;
+}
+
+@media (max-width: 768px) {
+    .agendamento-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .agendamento-actions {
+        margin-top: 15px;
+        width: 100%;
+    }
+    
+    .actions-section {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+</style>
+{% endblock %}

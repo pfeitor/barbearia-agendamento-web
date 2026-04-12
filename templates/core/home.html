@@ -1,10 +1,86 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Painel inicial</h2>
-<div class="grid">
-  <div class="card"><h3>Clientes</h3><p>Gerencie cadastro de clientes.</p><a class="button" href="/clientes/">Abrir</a></div>
-  <div class="card"><h3>Profissionais</h3><p>Cadastre barbeiros e controle ativos.</p><a class="button" href="/profissionais/">Abrir</a></div>
-  <div class="card"><h3>Serviços</h3><p>Defina serviços, duração e preço.</p><a class="button" href="/servicos/">Abrir</a></div>
-  <div class="card"><h3>Agendamentos</h3><p>Crie e acompanhe horários.</p><a class="button" href="/agendamentos/">Abrir</a></div>
+<!-- Este template é usado como fallback, mas normalmente o HomeView redireciona -->
+<div class="welcome-container">
+    <h2>Bem-vindo ao PI Barbearia</h2>
+    <p>Sistema de agendamento online</p>
+    
+    <div class="actions">
+        {% if 'cliente_id' in request.session %}
+            <a href="{% url 'meus_agendamentos' %}" class="btn btn-primary">Meus Agendamentos</a>
+            <a href="{% url 'meus_dados' %}" class="btn btn-secondary">Meus Dados</a>
+            <a href="{% url 'logout_cliente' %}" class="btn btn-outline">Sair</a>
+        {% elif request.user.is_authenticated and request.user.is_staff %}
+            <a href="{% url 'admin_dashboard' %}" class="btn btn-primary">Painel Admin</a>
+            <a href="{% url 'logout_admin' %}" class="btn btn-outline">Sair</a>
+        {% else %}
+            <a href="{% url 'login_cliente' %}" class="btn btn-primary">Área do Cliente</a>
+            <a href="{% url 'login_admin' %}" class="btn btn-outline">Acesso Admin</a>
+        {% endif %}
+    </div>
 </div>
+
+<style>
+.welcome-container {
+    text-align: center;
+    max-width: 600px;
+    margin: 50px auto;
+    padding: 40px;
+}
+
+.welcome-container h2 {
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.welcome-container p {
+    color: #666;
+    margin-bottom: 40px;
+    font-size: 18px;
+}
+
+.actions {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 12px 24px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+}
+
+.btn-outline {
+    background: transparent;
+    color: #6c757d;
+    border: 1px solid #6c757d;
+}
+
+.btn-outline:hover {
+    background: #6c757d;
+    color: white;
+}
+</style>
 {% endblock %}

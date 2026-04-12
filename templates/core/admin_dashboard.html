@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Painel Administrativo - PI Barbearia{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <div class="dashboard-header">
+        <h2>Painel Administrativo</h2>
+        <p>Bem-vindo(a), {{ user.get_full_name|default:user.username }}!</p>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>{{ total_clientes }}</h3>
+            <p>Total de Clientes</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ total_agendamentos }}</h3>
+            <p>Total de Agendamentos</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ agendamentos_hoje }}</h3>
+            <p>Agendamentos Hoje</p>
+        </div>
+    </div>
+    
+    <div class="actions-grid">
+        <a href="{% url 'clientes_lista' %}" class="action-card">
+            <h3>👥 Clientes</h3>
+            <p>Gerenciar clientes</p>
+        </a>
+        <a href="{% url 'agendamentos_lista' %}" class="action-card">
+            <h3>📅 Agendamentos</h3>
+            <p>Gerenciar agendamentos</p>
+        </a>
+        <a href="/profissionais/" class="action-card">
+            <h3>✂️ Profissionais</h3>
+            <p>Gerenciar profissionais</p>
+        </a>
+        <a href="/servicos/" class="action-card">
+            <h3>💈 Serviços</h3>
+            <p>Gerenciar serviços</p>
+        </a>
+        <a href="/admin/" class="action-card">
+            <h3>⚙️ Django Admin</h3>
+            <p>Administração avançada</p>
+        </a>
+        <a href="{% url 'logout_admin' %}" class="action-card logout">
+            <h3>🚪 Sair</h3>
+            <p>Encerrar sessão</p>
+        </a>
+    </div>
+    
+    <div class="recent-section">
+        <h3>Agendamentos Recentes</h3>
+        {% if agendamentos_recentes %}
+            <div class="recent-list">
+                {% for agendamento in agendamentos_recentes %}
+                    <div class="recent-item">
+                        <div class="recent-info">
+                            <strong>{{ agendamento.cliente.nome }}</strong>
+                            <span>- {{ agendamento.servico.nome }}</span>
+                            <span>- {{ agendamento.data_hora_inicio|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        <span class="status status-{{ agendamento.status|lower }}">
+                            {{ agendamento.get_status_display }}
+                        </span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>Nenhum agendamento recente.</p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.admin-dashboard {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.dashboard-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.dashboard-header h2 {
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.dashboard-header p {
+    color: #666;
+    font-size: 18px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.stat-card {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.stat-card h3 {
+    font-size: 2.5em;
+    color: #007bff;
+    margin-bottom: 10px;
+}
+
+.stat-card p {
+    color: #666;
+    font-weight: 500;
+}
+
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.action-card {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-decoration: none;
+    color: #333;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.action-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    color: #007bff;
+}
+
+.action-card.logout:hover {
+    color: #dc3545;
+}
+
+.action-card h3 {
+    margin-bottom: 10px;
+    font-size: 1.2em;
+}
+
+.action-card p {
+    color: #666;
+    font-size: 0.9em;
+}
+
+.recent-section {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.recent-section h3 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.recent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.recent-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.recent-info {
+    flex: 1;
+}
+
+.recent-info strong {
+    color: #333;
+}
+
+.recent-info span {
+    color: #666;
+    margin-left: 10px;
+}
+
+.status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.status-agendado {
+    background: #ffc107;
+    color: #000;
+}
+
+.status-confirmado {
+    background: #28a745;
+    color: white;
+}
+
+.status-cancelado {
+    background: #dc3545;
+    color: white;
+}
+
+.status-concluido {
+    background: #6c757d;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .actions-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .recent-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .recent-info span {
+        display: block;
+        margin-left: 0;
+        margin-top: 5px;
+    }
+}
+</style>
+{% endblock %}

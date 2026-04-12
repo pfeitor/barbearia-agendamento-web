@@ -6,27 +6,151 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}PI Barbearia{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <style>
+    /* Estilos base para navegação */
+    header {
+      background: #333;
+      color: white;
+      padding: 1rem 0;
+    }
+    
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    
+    nav a {
+      color: white;
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      transition: background 0.3s ease;
+    }
+    
+    nav a:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .btn-logout {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .btn-logout:hover {
+      background: #c82333;
+    }
+    
+    .messages {
+      list-style: none;
+      padding: 0;
+      margin: 20px auto;
+      max-width: 1200px;
+    }
+    
+    .messages li {
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .messages li.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    @media (max-width: 768px) {
+      .header-content {
+        flex-direction: column;
+        gap: 15px;
+      }
+      
+      nav {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+    }
+  </style>
 </head>
 <body>
 <header>
-  <h1>PI Barbearia</h1>
-  <nav>
-    <a href="/">Início</a>
-    <a href="/clientes/">Clientes</a>
-    <a href="/profissionais/">Profissionais</a>
-    <a href="/servicos/">Serviços</a>
-    <a href="/agendamentos/">Agendamentos</a>
-    <a href="/admin/">Admin</a>
-    {% if user.is_authenticated %}
-      <span>Olá, {{ user.username }}</span>
-      <form method="post" action="{% url 'logout' %}" style="display:inline;">{% csrf_token %}<button type="submit">Sair</button></form>
-    {% else %}
-      <a href="{% url 'login' %}">Entrar</a>
-    {% endif %}
-  </nav>
+  <div class="header-content">
+    <h1>PI Barbearia</h1>
+    <nav>
+      {% if 'cliente_id' in request.session %}
+        <!-- Menu Cliente -->
+        <a href="{% url 'home' %}">Início</a>
+        <a href="{% url 'agendamentos_create' %}">Novo Agendamento</a>
+        <a href="{% url 'meus_agendamentos' %}">Meus Agendamentos</a>
+        <a href="{% url 'meus_dados' %}">Meus Dados</a>
+        <div class="user-info">
+          <span>Olá, {{ request.cliente.nome }}</span>
+          <form method="post" action="{% url 'logout_cliente' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn-logout">Sair</button>
+          </form>
+        </div>
+      {% elif request.user.is_authenticated and request.user.is_staff %}
+        <!-- Menu Admin -->
+        <a href="{% url 'admin_dashboard' %}">Painel</a>
+        <a href="{% url 'clientes_lista' %}">Clientes</a>
+        <a href="/profissionais/">Profissionais</a>
+        <a href="/servicos/">Serviços</a>
+        <a href="{% url 'agendamentos_lista' %}">Agendamentos</a>
+        <a href="/admin/">Django Admin</a>
+        <div class="user-info">
+          <span>Olá, {{ user.get_full_name|default:user.username }}</span>
+          <form method="post" action="{% url 'logout_admin' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn-logout">Sair</button>
+          </form>
+        </div>
+      {% else %}
+        <!-- Menu Público -->
+        <a href="{% url 'login_cliente' %}">Área do Cliente</a>
+        <div class="user-info">
+          <a href="{% url 'login_admin' %}" style="font-size: 0.9em; opacity: 0.8;">Acesso Admin</a>
+        </div>
+      {% endif %}
+    </nav>
+  </div>
 </header>
 <main>
-  {% if messages %}<ul class="messages">{% for message in messages %}<li>{{ message }}</li>{% endfor %}</ul>{% endif %}
+  {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
   {% block content %}{% endblock %}
 </main>
 </body>
