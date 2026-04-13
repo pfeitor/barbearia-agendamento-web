@@ -1,0 +1,476 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ view_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h2>{{ view_title }}</h2>
+                </div>
+                <div class="card-body">
+                    <!-- Debug Info -->
+                    <div class="alert alert-info">
+                        <h5>Debug Information:</h5>
+                        <ul>
+                            <li>Form loaded: <span id="form-loaded">No</span></li>
+                            <li>JavaScript working: <span id="js-working">No</span></li>
+                            <li>API URL: <code id="api-url">Not set</code></li>
+                            <li>Selected Professional: <span id="selected-prof">None</span></li>
+                            <li>Selected Service: <span id="selected-serv">None</span></li>
+                            <li>Professional field ID: <code id="prof-field-id">Checking...</code></li>
+                            <li>Service field ID: <code id="serv-field-id">Checking...</code></li>
+                            <li>Professional found: <span id="prof-found">No</span></li>
+                            <li>Service found: <span id="serv-found">No</span></li>
+                        </ul>
+                    </div>
+
+                    <form method="post" id="agendamento-form">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.profissional.id }}" class="form-label">
+                                        Profissional *
+                                    </label>
+                                    {{ form.profissional }}
+                                    {% if form.profissional.errors %}
+                                        <div class="text-danger">
+                                            {{ form.profissional.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.servico.id }}" class="form-label">
+                                        Serviço *
+                                    </label>
+                                    {{ form.servico }}
+                                    {% if form.servico.errors %}
+                                        <div class="text-danger">
+                                            {{ form.servico.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Manual API Test Button -->
+                        <div class="mb-3">
+                            <button type="button" onclick="testAPI()" class="btn btn-warning">
+                                <i class="fas fa-bug"></i> Test API Manually
+                            </button>
+                            <button type="button" onclick="loadAvailability()" class="btn btn-info">
+                                <i class="fas fa-refresh"></i> Load Availability
+                            </button>
+                            <button type="button" onclick="triggerProfissionalChange()" class="btn btn-success">
+                                <i class="fas fa-play"></i> Trigger Profissional Change
+                            </button>
+                            <button type="button" onclick="triggerServicoChange()" class="btn btn-success">
+                                <i class="fas fa-play"></i> Trigger Service Change
+                            </button>
+                        </div>
+                        
+                        <!-- Loading message -->
+                        <div id="loading-message" class="text-center text-info" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i> Carregando horários disponíveis...
+                        </div>
+                        
+                        <!-- Error message -->
+                        <div id="availability-error" class="alert alert-danger" style="display: none;">
+                            <strong>Erro:</strong> <span id="error-text"></span>
+                        </div>
+                        
+                        <!-- No availability message -->
+                        <div id="no-availability" class="alert alert-warning" style="display: none;">
+                            <strong>Nenhum horário disponível</strong> para os próximos dias.
+                        </div>
+                        
+                        <!-- Availability results -->
+                        <div id="availability-results" style="display: none;">
+                            <h4>Horários Disponíveis</h4>
+                            <div id="days-container"></div>
+                        </div>
+                        
+                        <!-- API Response Debug -->
+                        <div id="api-debug" class="alert alert-secondary" style="display: none;">
+                            <h5>API Response:</h5>
+                            <pre id="api-response"></pre>
+                        </div>
+                        
+                        <!-- Hidden field for selected datetime -->
+                        <input type="hidden" name="data_hora_inicio" id="selected-datetime" required>
+                        
+                        <!-- Submit button -->
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary" id="submit-btn" disabled>
+                                <i class="fas fa-save"></i> Salvar Agendamento
+                            </button>
+                            <a href="{% url 'agendamentos_lista' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Voltar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.day-container {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #f8f9fa;
+}
+
+.day-header {
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.slots-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.time-slot {
+    padding: 8px 12px;
+    border: 1px solid #007bff;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #007bff;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.time-slot:hover {
+    background-color: #007bff;
+    color: white;
+}
+
+.time-slot.selected {
+    background-color: #007bff;
+    color: white;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('JavaScript loaded!');
+    document.getElementById('form-loaded').textContent = 'Yes';
+    document.getElementById('js-working').textContent = 'Yes';
+    
+    let currentProfessionalId = null;
+    let currentServiceId = null;
+    let selectedSlot = null;
+
+    // Try to find the fields by multiple methods
+    let profissionalSelect = document.getElementById('{{ form.profissional.id }}');
+    let servicoSelect = document.getElementById('{{ form.servico.id }}');
+    
+    // If not found by ID, try by name
+    if (!profissionalSelect) {
+        profissionalSelect = document.querySelector('select[name="profissional"]');
+    }
+    if (!servicoSelect) {
+        servicoSelect = document.querySelector('select[name="servico"]');
+    }
+    
+    // If still not found, try by any select
+    if (!profissionalSelect || !servicoSelect) {
+        const selects = document.querySelectorAll('select');
+        console.log('All selects found:', selects);
+        if (selects.length >= 2) {
+            profissionalSelect = selects[0];
+            servicoSelect = selects[1];
+        }
+    }
+    
+    const submitBtn = document.getElementById('submit-btn');
+    const selectedDatetimeInput = document.getElementById('selected-datetime');
+
+    console.log('Profissional select:', profissionalSelect);
+    console.log('Servico select:', servicoSelect);
+    
+    // Update debug info
+    document.getElementById('prof-field-id').textContent = profissionalSelect ? profissionalSelect.id : 'Not found';
+    document.getElementById('serv-field-id').textContent = servicoSelect ? servicoSelect.id : 'Not found';
+    document.getElementById('prof-found').textContent = profissionalSelect ? 'Yes' : 'No';
+    document.getElementById('serv-found').textContent = servicoSelect ? 'Yes' : 'No';
+
+    // Event listeners - only add if fields are found
+    if (profissionalSelect) {
+        console.log('Adding event listeners to profissional select...');
+        
+        // Try multiple events to ensure detection
+        profissionalSelect.addEventListener('change', function() {
+            console.log('Profissional changed to:', this.value);
+            currentProfessionalId = this.value;
+            document.getElementById('selected-prof').textContent = this.value || 'None';
+            resetAvailability();
+            if (currentProfessionalId && currentServiceId) {
+                loadAvailability();
+            }
+        });
+        
+        // Add input event as backup
+        profissionalSelect.addEventListener('input', function() {
+            console.log('Profissional input to:', this.value);
+            currentProfessionalId = this.value;
+            document.getElementById('selected-prof').textContent = this.value || 'None';
+            resetAvailability();
+            if (currentProfessionalId && currentServiceId) {
+                loadAvailability();
+            }
+        });
+        
+        // Add click event as another backup
+        profissionalSelect.addEventListener('click', function() {
+            setTimeout(() => {
+                if (this.value !== currentProfessionalId) {
+                    console.log('Profissional click detected, value:', this.value);
+                    currentProfessionalId = this.value;
+                    document.getElementById('selected-prof').textContent = this.value || 'None';
+                    resetAvailability();
+                    if (currentProfessionalId && currentServiceId) {
+                        loadAvailability();
+                    }
+                }
+            }, 100);
+        });
+        
+        console.log('Event listeners added to profissional select');
+    } else {
+        console.error('Profissional select not found!');
+    }
+
+    if (servicoSelect) {
+        console.log('Adding event listeners to service select...');
+        
+        servicoSelect.addEventListener('change', function() {
+            console.log('Servico changed to:', this.value);
+            currentServiceId = this.value;
+            document.getElementById('selected-serv').textContent = this.value || 'None';
+            resetAvailability();
+            if (currentProfessionalId && currentServiceId) {
+                loadAvailability();
+            }
+        });
+        
+        // Add input event as backup
+        servicoSelect.addEventListener('input', function() {
+            console.log('Servico input to:', this.value);
+            currentServiceId = this.value;
+            document.getElementById('selected-serv').textContent = this.value || 'None';
+            resetAvailability();
+            if (currentProfessionalId && currentServiceId) {
+                loadAvailability();
+            }
+        });
+        
+        // Add click event as another backup
+        servicoSelect.addEventListener('click', function() {
+            setTimeout(() => {
+                if (this.value !== currentServiceId) {
+                    console.log('Servico click detected, value:', this.value);
+                    currentServiceId = this.value;
+                    document.getElementById('selected-serv').textContent = this.value || 'None';
+                    resetAvailability();
+                    if (currentProfessionalId && currentServiceId) {
+                        loadAvailability();
+                    }
+                }
+            }, 100);
+        });
+        
+        console.log('Event listeners added to service select');
+    } else {
+        console.error('Servico select not found!');
+    }
+    
+    // Add manual trigger functions for testing
+    window.triggerProfissionalChange = function() {
+        if (profissionalSelect) {
+            console.log('Manually triggering profissional change...');
+            profissionalSelect.dispatchEvent(new Event('change'));
+        }
+    };
+    
+    window.triggerServicoChange = function() {
+        if (servicoSelect) {
+            console.log('Manually triggering service change...');
+            servicoSelect.dispatchEvent(new Event('change'));
+        }
+    };
+
+    window.testAPI = function() {
+        console.log('Testing API manually...');
+        const url = '{% url "simple_final_availability" %}?professional_id=1&service_id=1';
+        document.getElementById('api-url').textContent = url;
+        
+        fetch(url)
+            .then(response => {
+                console.log('API Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('API Data:', data);
+                document.getElementById('api-debug').style.display = 'block';
+                document.getElementById('api-response').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.results && data.results.length > 0) {
+                    renderAvailability(data.results);
+                    document.getElementById('availability-results').style.display = 'block';
+                } else {
+                    document.getElementById('no-availability').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('API Error:', error);
+                document.getElementById('error-text').textContent = error.message;
+                document.getElementById('availability-error').style.display = 'block';
+            });
+    };
+
+    function resetAvailability() {
+        console.log('Resetting availability...');
+        document.getElementById('loading-message').style.display = 'none';
+        document.getElementById('availability-error').style.display = 'none';
+        document.getElementById('availability-results').style.display = 'none';
+        document.getElementById('no-availability').style.display = 'none';
+        document.getElementById('api-debug').style.display = 'none';
+        document.getElementById('days-container').innerHTML = '';
+        submitBtn.disabled = true;
+        selectedSlot = null;
+        selectedDatetimeInput.value = '';
+    }
+
+    window.loadAvailability = function() {
+        console.log('Loading availability...');
+        if (!currentProfessionalId || !currentServiceId) {
+            console.log('Missing professional or service ID');
+            return;
+        }
+        
+        const url = `{% url 'simple_final_availability' %}?professional_id=${currentProfessionalId}&service_id=${currentServiceId}`;
+        document.getElementById('api-url').textContent = url;
+        
+        console.log('Fetching URL:', url);
+        
+        // Show loading
+        document.getElementById('loading-message').style.display = 'block';
+        document.getElementById('availability-error').style.display = 'none';
+        document.getElementById('availability-results').style.display = 'none';
+        document.getElementById('no-availability').style.display = 'none';
+        document.getElementById('api-debug').style.display = 'none';
+        
+        fetch(url)
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Received data:', data);
+                document.getElementById('loading-message').style.display = 'none';
+                document.getElementById('api-debug').style.display = 'block';
+                document.getElementById('api-response').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.error) {
+                    document.getElementById('error-text').textContent = data.error;
+                    document.getElementById('availability-error').style.display = 'block';
+                    return;
+                }
+                
+                if (data.results && data.results.length > 0) {
+                    renderAvailability(data.results);
+                    document.getElementById('availability-results').style.display = 'block';
+                } else {
+                    document.getElementById('no-availability').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('loading-message').style.display = 'none';
+                document.getElementById('error-text').textContent = error.message;
+                document.getElementById('availability-error').style.display = 'block';
+            });
+    }
+
+    function renderAvailability(days) {
+        console.log('Rendering availability for days:', days);
+        const container = document.getElementById('days-container');
+        container.innerHTML = '';
+        
+        days.forEach(day => {
+            const dayElement = createDayElement(day);
+            container.appendChild(dayElement);
+        });
+    }
+
+    function createDayElement(day) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'day-container';
+        
+        const header = document.createElement('div');
+        header.className = 'day-header';
+        header.textContent = `${day.weekday} - ${day.date}`;
+        dayDiv.appendChild(header);
+        
+        const slotsContainer = document.createElement('div');
+        slotsContainer.className = 'slots-container';
+        
+        day.slots.forEach(slot => {
+            const slotElement = createSlotElement(slot, day.date);
+            slotsContainer.appendChild(slotElement);
+        });
+        
+        dayDiv.appendChild(slotsContainer);
+        return dayDiv;
+    }
+
+    function createSlotElement(slot, date) {
+        const slotDiv = document.createElement('div');
+        slotDiv.className = 'time-slot';
+        slotDiv.textContent = slot;
+        
+        slotDiv.addEventListener('click', function() {
+            console.log('Slot selected:', slot, 'on date:', date);
+            if (selectedSlot) {
+                selectedSlot.classList.remove('selected');
+            }
+            this.classList.add('selected');
+            selectedSlot = this;
+            const datetime = `${date}T${slot}:00`;
+            selectedDatetimeInput.value = datetime;
+            submitBtn.disabled = false;
+        });
+        
+        return slotDiv;
+    }
+
+    // Form submission validation
+    document.getElementById('agendamento-form').addEventListener('submit', function(e) {
+        if (!selectedDatetimeInput.value) {
+            e.preventDefault();
+            alert('Por favor, selecione um horário disponível.');
+            return false;
+        }
+    });
+
+    console.log('JavaScript setup complete!');
+});
+</script>
+{% endblock %}

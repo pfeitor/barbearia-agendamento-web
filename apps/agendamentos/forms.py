@@ -3,11 +3,12 @@ from .models import Agendamento
 
 
 class AgendamentoForm(forms.ModelForm):
-    data_hora_inicio = forms.DateTimeField(widget=forms.DateTimeInput(attrs={"type": "datetime-local"}))
-
     def __init__(self, *args, **kwargs):
         user_cliente = kwargs.pop('user_cliente', None)
         super().__init__(*args, **kwargs)
+        
+        # Hide the datetime field since it's handled by JavaScript
+        self.fields['data_hora_inicio'].widget = forms.HiddenInput()
         
         # Se for cliente logado, filtra o campo cliente para mostrar apenas ele mesmo
         if user_cliente:

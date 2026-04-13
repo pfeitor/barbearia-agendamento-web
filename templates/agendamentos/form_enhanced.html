@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        {% if object %}Editar Agendamento{% else %}Novo Agendamento{% endif %}
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="agendamento-form">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.profissional.id_for_label }}" class="form-label">
+                                        Profissional *
+                                    </label>
+                                    {{ form.profissional }}
+                                    {% if form.profissional.errors %}
+                                        <div class="text-danger">
+                                            {{ form.profissional.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.servico.id_for_label }}" class="form-label">
+                                        Serviço *
+                                    </label>
+                                    {{ form.servico }}
+                                    {% if form.servico.errors %}
+                                        <div class="text-danger">
+                                            {{ form.servico.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cliente field (hidden for regular users) -->
+                        {% if form.cliente %}
+                            <div class="form-group mb-3 d-none">
+                                {{ form.cliente }}
+                            </div>
+                        {% endif %}
+
+                        <!-- Status fields (hidden for regular users) -->
+                        {% if form.status %}
+                            <div class="form-group mb-3 d-none">
+                                {{ form.status }}
+                            </div>
+                        {% endif %}
+                        
+                        {% if form.confirmado_whatsapp %}
+                            <div class="form-group mb-3 d-none">
+                                {{ form.confirmado_whatsapp }}
+                            </div>
+                        {% endif %}
+
+                        <!-- Availability Section -->
+                        <div id="availability-section" style="display: none;">
+                            <hr>
+                            <h4>Horários Disponíveis</h4>
+                            
+                            <div id="loading-message" class="alert alert-info">
+                                <i class="fas fa-spinner fa-spin"></i> Carregando horários disponíveis...
+                            </div>
+                            
+                            <div id="availability-error" class="alert alert-danger" style="display: none;">
+                                <i class="fas fa-exclamation-triangle"></i> 
+                                <span id="error-text"></span>
+                            </div>
+                            
+                            <div id="availability-results" style="display: none;">
+                                <!-- Pagination controls -->
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <button type="button" id="prev-page" class="btn btn-outline-primary" disabled>
+                                        <i class="fas fa-chevron-left"></i> Anterior
+                                    </button>
+                                    <span id="page-info" class="text-muted"></span>
+                                    <button type="button" id="next-page" class="btn btn-outline-primary" disabled>
+                                        Próximo <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                                
+                                <div id="days-container">
+                                    <!-- Available days and slots will be inserted here -->
+                                </div>
+                            </div>
+                            
+                            <div id="no-availability" class="alert alert-warning" style="display: none;">
+                                <i class="fas fa-calendar-times"></i> 
+                                Nenhum horário disponível encontrado para os próximos dias.
+                            </div>
+                        </div>
+
+                        <!-- Hidden field for selected datetime -->
+                        <input type="hidden" name="data_hora_inicio" id="selected-datetime" required>
+
+                        <div class="form-group mb-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i>
+                                Selecione um profissional e serviço para ver os horários disponíveis.
+                            </small>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% if request.user.is_staff %}{% url 'agendamentos_lista' %}{% else %}{% url 'meus_agendamentos' %}{% endif %}" 
+                               class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Voltar
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submit-btn" disabled>
+                                <i class="fas fa-save"></i> Salvar Agendamento
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.availability-day {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    overflow: hidden;
+}
+
+.day-header {
+    background-color: #f8f9fa;
+    padding: 10px 15px;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: bold;
+}
+
+.slots-container {
+    padding: 15px;
+}
+
+.time-slot {
+    display: inline-block;
+    margin: 3px;
+    padding: 8px 12px;
+    border: 1px solid #007bff;
+    border-radius: 4px;
+    background-color: white;
+    color: #007bff;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9em;
+}
+
+.time-slot:hover {
+    background-color: #007bff;
+    color: white;
+    transform: translateY(-1px);
+}
+
+.time-slot.selected {
+    background-color: #007bff;
+    color: white;
+}
+
+.time-slot:disabled {
+    background-color: #e9ecef;
+    color: #6c757d;
+    cursor: not-allowed;
+    border-color: #dee2e6;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const profissionalSelect = document.getElementById('{{ form.profissional.id_for_label }}');
+    const servicoSelect = document.getElementById('{{ form.servico.id_for_label }}');
+    const availabilitySection = document.getElementById('availability-section');
+    const submitBtn = document.getElementById('submit-btn');
+    const selectedDatetimeInput = document.getElementById('selected-datetime');
+    
+    let currentProfessionalId = null;
+    let currentServiceId = null;
+    let currentPage = 1;
+    let selectedSlot = null;
+
+    // Function to load availability
+    function loadAvailability(page = 1) {
+        if (!currentProfessionalId || !currentServiceId) return;
+        
+        currentPage = page;
+        
+        // Show loading
+        document.getElementById('loading-message').style.display = 'block';
+        document.getElementById('availability-error').style.display = 'none';
+        document.getElementById('availability-results').style.display = 'none';
+        document.getElementById('no-availability').style.display = 'none';
+        
+        const url = `{% url 'definitiva_availability' %}?professional_id=${currentProfessionalId}&service_id=${currentServiceId}&_t=${Date.now()}`;
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loading-message').style.display = 'none';
+                
+                if (data.error) {
+                    document.getElementById('error-text').textContent = data.error;
+                    document.getElementById('availability-error').style.display = 'block';
+                    return;
+                }
+                
+                if (data.results && data.results.length > 0) {
+                    renderAvailability(data);
+                    document.getElementById('availability-results').style.display = 'block';
+                } else {
+                    document.getElementById('no-availability').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading availability:', error);
+                document.getElementById('loading-message').style.display = 'none';
+                document.getElementById('error-text').textContent = 'Erro ao carregar horários. Tente novamente.';
+                document.getElementById('availability-error').style.display = 'block';
+            });
+    }
+
+    // Function to render availability
+    function renderAvailability(data) {
+        const daysContainer = document.getElementById('days-container');
+        daysContainer.innerHTML = '';
+        
+        data.results.forEach(day => {
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'availability-day';
+            
+            // Format date
+            const date = new Date(day.date);
+            const formattedDate = date.toLocaleDateString('pt-BR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            dayDiv.innerHTML = `
+                <div class="day-header">
+                    ${formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1)}
+                </div>
+                <div class="slots-container">
+                    ${day.slots.map(slot => `
+                        <button type="button" class="time-slot" data-datetime="${day.date}T${slot}:00">
+                            ${slot}
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+            
+            daysContainer.appendChild(dayDiv);
+        });
+        
+        // Update pagination
+        document.getElementById('prev-page').disabled = !data.has_previous;
+        document.getElementById('next-page').disabled = !data.has_next;
+        document.getElementById('page-info').textContent = `Página ${data.current_page || currentPage}`;
+        
+        // Add click handlers to slots
+        document.querySelectorAll('.time-slot').forEach(slot => {
+            slot.addEventListener('click', function() {
+                selectSlot(this);
+            });
+        });
+    }
+
+    // Function to select a time slot
+    function selectSlot(slotElement) {
+        // Remove previous selection
+        document.querySelectorAll('.time-slot.selected').forEach(slot => {
+            slot.classList.remove('selected');
+        });
+        
+        // Add selection to clicked slot
+        slotElement.classList.add('selected');
+        
+        // Update hidden input
+        const datetime = slotElement.dataset.datetime;
+        selectedDatetimeInput.value = datetime;
+        selectedSlot = slotElement;
+        
+        // Enable submit button
+        submitBtn.disabled = false;
+    }
+
+    // Event listeners for professional and service changes
+    profissionalSelect.addEventListener('change', function() {
+        currentProfessionalId = this.value;
+        selectedSlot = null;
+        selectedDatetimeInput.value = '';
+        submitBtn.disabled = true;
+        
+        if (currentProfessionalId && currentServiceId) {
+            availabilitySection.style.display = 'block';
+            loadAvailability(1);
+        } else {
+            availabilitySection.style.display = 'none';
+        }
+    });
+
+    servicoSelect.addEventListener('change', function() {
+        currentServiceId = this.value;
+        selectedSlot = null;
+        selectedDatetimeInput.value = '';
+        submitBtn.disabled = true;
+        
+        if (currentProfessionalId && currentServiceId) {
+            availabilitySection.style.display = 'block';
+            loadAvailability(1);
+        } else {
+            availabilitySection.style.display = 'none';
+        }
+    });
+
+    // Pagination controls
+    document.getElementById('prev-page').addEventListener('click', function() {
+        if (currentPage > 1) {
+            loadAvailability(currentPage - 1);
+        }
+    });
+
+    document.getElementById('next-page').addEventListener('click', function() {
+        loadAvailability(currentPage + 1);
+    });
+
+    // Form validation
+    document.getElementById('agendamento-form').addEventListener('submit', function(e) {
+        if (!selectedDatetimeInput.value) {
+            e.preventDefault();
+            alert('Por favor, selecione um horário disponível.');
+            return false;
+        }
+    });
+
+    // Initialize if values are already selected (for edit forms)
+    if (profissionalSelect.value && servicoSelect.value) {
+        currentProfessionalId = profissionalSelect.value;
+        currentServiceId = servicoSelect.value;
+        availabilitySection.style.display = 'block';
+        loadAvailability(1);
+    }
+});
+</script>
+{% endblock %}

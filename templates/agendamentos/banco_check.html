@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Verificação do Banco - Schedules</h2>
+                </div>
+                <div class="card-body">
+                    
+                    <h3>Informações Gerais</h3>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>Hoje</th>
+                            <td>{{ hoje }} (weekday: {{ hoje_weekday }})</td>
+                        </tr>
+                        <tr>
+                            <th>Conceito Python</th>
+                            <td>0=Segunda, 1=Terça, 2=Quarta, 3=Quinta, 4=Sexta, 5=Sábado, 6=Domingo</td>
+                        </tr>
+                    </table>
+                    
+                    <h3>Profissionais</h3>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>Ativo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for prof in profissionais %}
+                            <tr>
+                                <td>{{ prof.id }}</td>
+                                <td>{{ prof.nome }}</td>
+                                <td>{{ prof.ativo }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    
+                    <h3>Schedules no Banco</h3>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Profissional</th>
+                                <th>Weekday</th>
+                                <th>Label</th>
+                                <th>Start Time</th>
+                                <th>End Time</th>
+                                <th>Lunch</th>
+                                <th>Day Off</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for schedule in schedules %}
+                            <tr>
+                                <td>{{ schedule.id }}</td>
+                                <td>{{ schedule.profissional.nome }}</td>
+                                <td>{{ schedule.weekday }}</td>
+                                <td>{{ schedule.weekday_label }}</td>
+                                <td>{{ schedule.start_time }}</td>
+                                <td>{{ schedule.end_time }}</td>
+                                <td>{{ schedule.lunch_start }} - {{ schedule.lunch_end }}</td>
+                                <td>{{ schedule.is_day_off }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    
+                    <h3>Próximos 7 Dias</h3>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Dia</th>
+                                <th>Data</th>
+                                <th>Weekday</th>
+                                <th>Nome</th>
+                                <th>Tem Schedule?</th>
+                                <th>Schedule ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dia in proximos_dias %}
+                            <tr {% if dia.numero == 0 %}class="table-warning"{% endif %}>
+                                <td>{{ dia.numero }}</td>
+                                <td>{{ dia.data }}</td>
+                                <td>{{ dia.weekday }}</td>
+                                <td>{{ dia.weekday_nome }}</td>
+                                <td>
+                                    {% if dia.tem_schedule %}
+                                        <span class="badge bg-success">SIM</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">NÃO</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if dia.schedule %}
+                                        {{ dia.schedule.id }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    
+                    <div class="alert alert-info">
+                        <h5>Diagnóstico:</h5>
+                        <ul>
+                            <li><strong>Hoje é weekday {{ hoje_weekday }}</strong> ({{ proximos_dias.0.weekday_nome }})</li>
+                            {% if schedules %}
+                                <li><strong>Schedules encontrados:</strong> 
+                                {% for schedule in schedules %}
+                                    {{ schedule.weekday_label }} (weekday {{ schedule.weekday }}){% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                                </li>
+                                {% for dia in proximos_dias %}
+                                    {% if dia.tem_schedule %}
+                                        <li><strong>{{ dia.weekday_nome }}</strong> ({{ dia.data }}) tem schedule ID {{ dia.schedule.id }}</li>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <li><strong>Nenhum schedule encontrado no banco!</strong></li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <a href="{% url 'agendamentos_create' %}" class="btn btn-primary">Voltar para Agendamentos</a>
+                        <a href="{% url 'debug_weekdays' %}" class="btn btn-secondary">Debug Weekdays</a>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.table-warning {
+    background-color: #fff3cd !important;
+}
+</style>
+{% endblock %}

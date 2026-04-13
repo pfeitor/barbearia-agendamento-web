@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ view_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h2>{{ view_title }}</h2>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="agendamento-form">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.profissional.id }}" class="form-label">
+                                        Profissional *
+                                    </label>
+                                    {{ form.profissional }}
+                                    {% if form.profissional.errors %}
+                                        <div class="text-danger">
+                                            {{ form.profissional.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.servico.id }}" class="form-label">
+                                        Serviço *
+                                    </label>
+                                    {{ form.servico }}
+                                    {% if form.servico.errors %}
+                                        <div class="text-danger">
+                                            {{ form.servico.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Loading message -->
+                        <div id="loading-message" class="text-center text-info" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i> Carregando horários disponíveis...
+                        </div>
+                        
+                        <!-- Error message -->
+                        <div id="availability-error" class="alert alert-danger" style="display: none;">
+                            <strong>Erro:</strong> <span id="error-text"></span>
+                        </div>
+                        
+                        <!-- No availability message -->
+                        <div id="no-availability" class="alert alert-warning" style="display: none;">
+                            <strong>Nenhum horário disponível</strong> para os próximos dias.
+                        </div>
+                        
+                        <!-- Availability results -->
+                        <div id="availability-results" style="display: none;">
+                            <h4>Horários Disponíveis</h4>
+                            <div id="days-container"></div>
+                        </div>
+                        
+                        <!-- Hidden field for selected datetime -->
+                        <input type="hidden" name="data_hora_inicio" id="selected-datetime" required>
+                        
+                        <!-- Submit button -->
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary" id="submit-btn" disabled>
+                                <i class="fas fa-save"></i> Salvar Agendamento
+                            </button>
+                            <a href="{% url 'agendamentos_lista' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Voltar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.day-container {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #f8f9fa;
+}
+
+.day-header {
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.slots-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.time-slot {
+    padding: 8px 12px;
+    border: 1px solid #007bff;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #007bff;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.time-slot:hover {
+    background-color: #007bff;
+    color: white;
+}
+
+.time-slot.selected {
+    background-color: #007bff;
+    color: white;
+}
+
+.time-slot.disabled {
+    background-color: #e9ecef;
+    color: #6c757d;
+    cursor: not-allowed;
+    border-color: #dee2e6;
+}
+
+.pagination-container {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.pagination-btn {
+    padding: 8px 16px;
+    margin: 0 5px;
+    border: 1px solid #007bff;
+    background-color: #fff;
+    color: #007bff;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background-color: #007bff;
+    color: white;
+}
+
+.pagination-btn:disabled {
+    background-color: #e9ecef;
+    color: #6c757d;
+    cursor: not-allowed;
+    border-color: #dee2e6;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentProfessionalId = null;
+    let currentServiceId = null;
+    let currentPage = 1;
+    let selectedSlot = null;
+
+    const profissionalSelect = document.getElementById('{{ form.profissional.id }}');
+    const servicoSelect = document.getElementById('{{ form.servico.id }}');
+    const submitBtn = document.getElementById('submit-btn');
+    const selectedDatetimeInput = document.getElementById('selected-datetime');
+
+    // Event listeners
+    profissionalSelect.addEventListener('change', handleProfessionalChange);
+    servicoSelect.addEventListener('change', handleServiceChange);
+
+    function handleProfessionalChange() {
+        currentProfessionalId = profissionalSelect.value;
+        resetAvailability();
+        if (currentProfessionalId && currentServiceId) {
+            loadAvailability();
+        }
+    }
+
+    function handleServiceChange() {
+        currentServiceId = servicoSelect.value;
+        resetAvailability();
+        if (currentProfessionalId && currentServiceId) {
+            loadAvailability();
+        }
+    }
+
+    function resetAvailability() {
+        document.getElementById('loading-message').style.display = 'none';
+        document.getElementById('availability-error').style.display = 'none';
+        document.getElementById('availability-results').style.display = 'none';
+        document.getElementById('no-availability').style.display = 'none';
+        document.getElementById('days-container').innerHTML = '';
+        submitBtn.disabled = true;
+        selectedSlot = null;
+        selectedDatetimeInput.value = '';
+    }
+
+    function loadAvailability() {
+        if (!currentProfessionalId || !currentServiceId) return;
+        
+        currentPage = 1;
+        
+        // Show loading
+        document.getElementById('loading-message').style.display = 'block';
+        document.getElementById('availability-error').style.display = 'none';
+        document.getElementById('availability-results').style.display = 'none';
+        document.getElementById('no-availability').style.display = 'none';
+        
+        // Usando API simples final (garantida funcionar)
+        const url = `{% url 'simple_final_availability' %}?professional_id=${currentProfessionalId}&service_id=${currentServiceId}`;
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loading-message').style.display = 'none';
+                
+                if (data.error) {
+                    document.getElementById('error-text').textContent = data.error;
+                    document.getElementById('availability-error').style.display = 'block';
+                    return;
+                }
+                
+                if (data.results && data.results.length > 0) {
+                    renderAvailability(data.results);
+                    document.getElementById('availability-results').style.display = 'block';
+                } else {
+                    document.getElementById('no-availability').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                document.getElementById('loading-message').style.display = 'none';
+                document.getElementById('error-text').textContent = 'Erro ao carregar horários. Tente novamente.';
+                document.getElementById('availability-error').style.display = 'block';
+                console.error('Error:', error);
+            });
+    }
+
+    function renderAvailability(days) {
+        const container = document.getElementById('days-container');
+        container.innerHTML = '';
+        
+        days.forEach(day => {
+            const dayElement = createDayElement(day);
+            container.appendChild(dayElement);
+        });
+    }
+
+    function createDayElement(day) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'day-container';
+        
+        const header = document.createElement('div');
+        header.className = 'day-header';
+        header.textContent = `${day.weekday} - ${day.date}`;
+        dayDiv.appendChild(header);
+        
+        const slotsContainer = document.createElement('div');
+        slotsContainer.className = 'slots-container';
+        
+        day.slots.forEach(slot => {
+            const slotElement = createSlotElement(slot, day.date);
+            slotsContainer.appendChild(slotElement);
+        });
+        
+        dayDiv.appendChild(slotsContainer);
+        return dayDiv;
+    }
+
+    function createSlotElement(slot, date) {
+        const slotDiv = document.createElement('div');
+        slotDiv.className = 'time-slot';
+        slotDiv.textContent = slot;
+        
+        slotDiv.addEventListener('click', function() {
+            // Remove previous selection
+            if (selectedSlot) {
+                selectedSlot.classList.remove('selected');
+            }
+            
+            // Add selection to current slot
+            this.classList.add('selected');
+            selectedSlot = this;
+            
+            // Set hidden field value
+            const datetime = `${date}T${slot}:00`;
+            selectedDatetimeInput.value = datetime;
+            submitBtn.disabled = false;
+        });
+        
+        return slotDiv;
+    }
+
+    // Form submission validation
+    document.getElementById('agendamento-form').addEventListener('submit', function(e) {
+        if (!selectedDatetimeInput.value) {
+            e.preventDefault();
+            alert('Por favor, selecione um horário disponível.');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}
