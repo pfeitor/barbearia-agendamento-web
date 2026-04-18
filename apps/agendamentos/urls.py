@@ -5,8 +5,11 @@ from .views import (
     AgendamentoListView, 
     AgendamentoUpdateView,
     MeusAgendamentosView,
-    availability_api_view
+    availability_api_view,
+    confirmar_agendamento,
+    cancelar_agendamento
 )
+from .views_simple_final import simple_final_availability
 
 urlpatterns = [
     # URLs administrativas
@@ -17,7 +20,10 @@ urlpatterns = [
     
     # URLs do cliente
     path("meus-agendamentos/", MeusAgendamentosView.as_view(), name="meus_agendamentos"),
+    path("<int:pk>/confirmar/", confirmar_agendamento, name="confirmar_agendamento"),
+    path("<int:pk>/cancelar/", cancelar_agendamento, name="cancelar_agendamento"),
     
     # API endpoints
     path("availability/", availability_api_view, name="availability_api"),
+    path("simple-final-availability/", simple_final_availability, name="simple_final_availability"),
 ]

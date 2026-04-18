@@ -55,6 +55,26 @@ O sistema foi projetado para:
 
 ---
 
+## 🗄️ Banco de Dados
+
+### Diagrama ER
+
+![Diagrama ER](docs/mer-pi-barbearia.png)
+
+> 🔗 [Visualizar diagrama interativo no dbdiagram.io](https://dbdiagram.io/d/mer-pi-barbearia-69c4953878c6c4bc7a6dd011)
+
+### Principais tabelas
+
+| Tabela | Descrição |
+|--------|-----------|
+| `cliente` | Clientes cadastrados na barbearia |
+| `profissional` | Barbeiros/profissionais ativos |
+| `servico` | Serviços oferecidos com duração e preço |
+| `agendamento` | Agendamentos vinculando cliente, profissional e serviço |
+| `professional_schedule` | Grade de horários semanais por profissional |
+
+---
+
 ## 📂 Estrutura do Projeto
 
 ```

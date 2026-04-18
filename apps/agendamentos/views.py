@@ -3,8 +3,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 from django.http import HttpResponseForbidden, JsonResponse
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 from django.utils.decorators import method_decorator
+from django.shortcuts import redirect
 from .forms import AgendamentoForm
 from .models import Agendamento
 from .services import AvailabilityService
@@ -130,6 +131,58 @@ class MeusAgendamentosView(ClienteRequiredMixin, ListView):
         return Agendamento.objects.filter(
             cliente=self.request.cliente
         ).select_related('profissional', 'servico').order_by('data_hora_inicio')
+
+
+@require_POST
+def confirmar_agendamento(request, pk):
+    """Confirmar um agendamento (mudar status de AGENDADO para CONFIRMADO)."""
+    # Verificar se cliente está na sessão
+    if 'cliente_id' not in request.session:
+        messages.error(request, 'Você precisa estar logado como cliente.')
+        return redirect('/login-cliente/')
+    
+    try:
+        from apps.clientes.models import Cliente
+        cliente = Cliente.objects.get(id=request.session['cliente_id'])
+        agendamento = Agendamento.objects.get(pk=pk, cliente=cliente)
+        
+        if agendamento.status != Agendamento.Status.AGENDADO:
+            messages.error(request, 'Apenas agendamentos com status "Agendado" podem ser confirmados.')
+        else:
+            agendamento.status = Agendamento.Status.CONFIRMADO
+            agendamento.save()
+            messages.success(request, 'Agendamento confirmado com sucesso!')
+            
+    except Agendamento.DoesNotExist:
+        messages.error(request, 'Agendamento não encontrado.')
+    
+    return redirect('meus_agendamentos')
+
+
+@require_POST
+def cancelar_agendamento(request, pk):
+    """Cancelar um agendamento (mudar status para CANCELADO)."""
+    # Verificar se cliente está na sessão
+    if 'cliente_id' not in request.session:
+        messages.error(request, 'Você precisa estar logado como cliente.')
+        return redirect('/login-cliente/')
+    
+    try:
+        from apps.clientes.models import Cliente
+        cliente = Cliente.objects.get(id=request.session['cliente_id'])
+        agendamento = Agendamento.objects.get(pk=pk, cliente=cliente)
+        
+        if agendamento.status not in [Agendamento.Status.AGENDADO, Agendamento.Status.CONFIRMADO]:
+            messages.error(request, 'Apenas agendamentos com status "Agendado" ou "Confirmado" podem ser cancelados.')
+        else:
+            agendamento.status = Agendamento.Status.CANCELADO
+            agendamento.save()
+            messages.success(request, 'Agendamento cancelado com sucesso!')
+            
+    except Agendamento.DoesNotExist:
+        messages.error(request, 'Agendamento não encontrado.')
+    
+    return redirect('meus_agendamentos')
 
 
 @require_GET

@@ -40,12 +40,29 @@
                             </p>
                         </div>
                         <div class="agendamento-actions">
-                            <a href="{% url 'agendamentos_editar' agendamento.id %}" class="btn btn-sm btn-secondary">
-                                Editar
-                            </a>
-                            <a href="{% url 'agendamentos_excluir' agendamento.id %}" class="btn btn-sm btn-danger">
-                                Cancelar
-                            </a>
+                            {% if agendamento.status == 'AGENDADO' %}
+                                <form method="post" action="{% url 'confirmar_agendamento' agendamento.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        Confirmar
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'cancelar_agendamento' agendamento.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        Cancelar
+                                    </button>
+                                </form>
+                            {% elif agendamento.status == 'CONFIRMADO' %}
+                                <form method="post" action="{% url 'cancelar_agendamento' agendamento.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        Cancelar
+                                    </button>
+                                </form>
+                            {% else %}
+                                <span class="text-muted">Agendamento {{ agendamento.status|lower }}</span>
+                            {% endif %}
                         </div>
                     </div>
                 {% endfor %}
@@ -140,6 +157,20 @@
 
 .btn-danger:hover {
     background: #c82333;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #218838;
+}
+
+.text-muted {
+    color: #6c757d;
+    font-style: italic;
 }
 
 .agendamentos-section h3 {

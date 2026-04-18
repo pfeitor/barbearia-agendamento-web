@@ -16,6 +16,7 @@
                         {% csrf_token %}
                         
                         <!-- Hidden fields -->
+                        {{ form.data_hora_inicio }}
                         {{ form.cliente }}
                         {{ form.status }}
                         {{ form.confirmado_whatsapp }}
@@ -71,9 +72,7 @@
                             <div id="days-container"></div>
                         </div>
                         
-                        <!-- Hidden field for selected datetime -->
-                        <input type="hidden" name="data_hora_inicio" id="selected-datetime" required>
-                        
+                                                
                         <!-- Submit button -->
                         <div class="mt-3">
                             <button type="submit" class="btn btn-primary" id="submit-btn" disabled>
@@ -197,7 +196,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     const submitBtn = document.getElementById('submit-btn');
-    const selectedDatetimeInput = document.getElementById('selected-datetime');
+    const selectedDatetimeInput = document.getElementById('id_data_hora_inicio');
+
+    // Check if datetime already has value (edit mode) and enable submit button
+    if (selectedDatetimeInput && selectedDatetimeInput.value) {
+        submitBtn.disabled = false;
+        console.log('Existing datetime found:', selectedDatetimeInput.value);
+    }
 
     // Event listeners - only add if fields are found
     if (profissionalSelect) {
