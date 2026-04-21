@@ -74,9 +74,15 @@
                             <button type="submit" class="btn btn-primary" id="submit-btn" disabled>
                                 <i class="fas fa-save"></i> Salvar Agendamento
                             </button>
-                            <a href="{% url 'agendamentos_lista' %}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Voltar
-                            </a>
+                            {% if request.cliente %}
+                                <a href="{% url 'meus_agendamentos' %}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> Voltar
+                                </a>
+                            {% else %}
+                                <a href="{% url 'agendamentos_lista' %}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> Voltar
+                                </a>
+                            {% endif %}
                         </div>
                     </form>
                 </div>
