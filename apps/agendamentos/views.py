@@ -10,6 +10,8 @@ from .forms import AgendamentoForm
 from .models import Agendamento
 from .services import AvailabilityService
 from apps.core.mixins import AdminRequiredMixin, ClienteRequiredMixin, AdminOrClienteMixin
+from apps.clientes.models import Cliente
+from apps.profissionais.models import Profissional
 
 
 class AgendamentoListView(AdminRequiredMixin, ListView):
@@ -17,6 +19,42 @@ class AgendamentoListView(AdminRequiredMixin, ListView):
     model = Agendamento
     template_name = "agendamentos/lista.html"
     context_object_name = "agendamentos"
+    paginate_by = 20
+    
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related('cliente', 'profissional', 'servico')
+        
+        # Filtro por status
+        status_filter = self.request.GET.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Filtro por cliente
+        cliente_filter = self.request.GET.get('cliente')
+        if cliente_filter:
+            queryset = queryset.filter(cliente_id=cliente_filter)
+        
+        # Filtro por profissional
+        profissional_filter = self.request.GET.get('profissional')
+        if profissional_filter:
+            queryset = queryset.filter(profissional_id=profissional_filter)
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Adicionar opções de filtros ao contexto
+        context['status_choices'] = Agendamento.Status.choices
+        context['clientes'] = Cliente.objects.all().order_by('nome')
+        context['profissionais'] = Profissional.objects.all().order_by('nome')
+        
+        # Manter valores dos filtros selecionados
+        context['filtro_status'] = self.request.GET.get('status', '')
+        context['filtro_cliente'] = self.request.GET.get('cliente', '')
+        context['filtro_profissional'] = self.request.GET.get('profissional', '')
+        
+        return context
 
 
 class AgendamentoCreateView(AdminOrClienteMixin, CreateView):
@@ -49,44 +87,6 @@ class AgendamentoCreateView(AdminOrClienteMixin, CreateView):
         return super().form_valid(form)
 
 
-class AgendamentoUpdateView(AdminOrClienteMixin, UpdateView):
-    """Atualização de agendamento - admin ou dono."""
-    model = Agendamento
-    form_class = AgendamentoForm
-    template_name = "agendamentos/form_clean.html"
-    
-    def get_success_url(self):
-        if hasattr(self.request, 'cliente'):
-            return reverse_lazy("meus_agendamentos")
-        return reverse_lazy("agendamentos_lista")
-    
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        
-        # Admin vê tudo
-        if self.request.user.is_authenticated and self.request.user.is_staff:
-            return queryset
-        
-        # Cliente vê só os próprios
-        if hasattr(self.request, 'cliente'):
-            return queryset.filter(cliente=self.request.cliente)
-        
-        return queryset.none()
-    
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        # Se for cliente, filtra opções relevantes
-        if hasattr(self.request, 'cliente'):
-            kwargs['user_cliente'] = self.request.cliente
-        return kwargs
-    
-    def form_valid(self, form):
-        if hasattr(self.request, 'cliente'):
-            messages.success(self.request, "Agendamento atualizado com sucesso!")
-        else:
-            messages.success(self.request, "Agendamento atualizado com sucesso.")
-        
-        return super().form_valid(form)
 
 
 class AgendamentoDeleteView(AdminOrClienteMixin, DeleteView):
@@ -136,15 +136,25 @@ class MeusAgendamentosView(ClienteRequiredMixin, ListView):
 @require_POST
 def confirmar_agendamento(request, pk):
     """Confirmar um agendamento (mudar status de AGENDADO para CONFIRMADO)."""
-    # Verificar se cliente está na sessão
-    if 'cliente_id' not in request.session:
-        messages.error(request, 'Você precisa estar logado como cliente.')
+    # Verificar se é admin ou cliente
+    is_admin = request.user.is_authenticated and request.user.is_staff
+    is_cliente = 'cliente_id' in request.session
+    
+    if not is_admin and not is_cliente:
+        messages.error(request, 'Você precisa estar logado como administrador ou cliente.')
         return redirect('/login-cliente/')
     
     try:
-        from apps.clientes.models import Cliente
-        cliente = Cliente.objects.get(id=request.session['cliente_id'])
-        agendamento = Agendamento.objects.get(pk=pk, cliente=cliente)
+        if is_admin:
+            # Admin pode confirmar qualquer agendamento
+            agendamento = Agendamento.objects.get(pk=pk)
+            redirect_url = 'agendamentos_lista'
+        else:
+            # Cliente só pode confirmar seus próprios agendamentos
+            from apps.clientes.models import Cliente
+            cliente = Cliente.objects.get(id=request.session['cliente_id'])
+            agendamento = Agendamento.objects.get(pk=pk, cliente=cliente)
+            redirect_url = 'meus_agendamentos'
         
         if agendamento.status != Agendamento.Status.AGENDADO:
             messages.error(request, 'Apenas agendamentos com status "Agendado" podem ser confirmados.')
@@ -156,21 +166,31 @@ def confirmar_agendamento(request, pk):
     except Agendamento.DoesNotExist:
         messages.error(request, 'Agendamento não encontrado.')
     
-    return redirect('meus_agendamentos')
+    return redirect(redirect_url)
 
 
 @require_POST
 def cancelar_agendamento(request, pk):
     """Cancelar um agendamento (mudar status para CANCELADO)."""
-    # Verificar se cliente está na sessão
-    if 'cliente_id' not in request.session:
-        messages.error(request, 'Você precisa estar logado como cliente.')
+    # Verificar se é admin ou cliente
+    is_admin = request.user.is_authenticated and request.user.is_staff
+    is_cliente = 'cliente_id' in request.session
+    
+    if not is_admin and not is_cliente:
+        messages.error(request, 'Você precisa estar logado como administrador ou cliente.')
         return redirect('/login-cliente/')
     
     try:
-        from apps.clientes.models import Cliente
-        cliente = Cliente.objects.get(id=request.session['cliente_id'])
-        agendamento = Agendamento.objects.get(pk=pk, cliente=cliente)
+        if is_admin:
+            # Admin pode cancelar qualquer agendamento
+            agendamento = Agendamento.objects.get(pk=pk)
+            redirect_url = 'agendamentos_lista'
+        else:
+            # Cliente só pode cancelar seus próprios agendamentos
+            from apps.clientes.models import Cliente
+            cliente = Cliente.objects.get(id=request.session['cliente_id'])
+            agendamento = Agendamento.objects.get(pk=pk, cliente=cliente)
+            redirect_url = 'meus_agendamentos'
         
         if agendamento.status not in [Agendamento.Status.AGENDADO, Agendamento.Status.CONFIRMADO]:
             messages.error(request, 'Apenas agendamentos com status "Agendado" ou "Confirmado" podem ser cancelados.')
@@ -182,7 +202,7 @@ def cancelar_agendamento(request, pk):
     except Agendamento.DoesNotExist:
         messages.error(request, 'Agendamento não encontrado.')
     
-    return redirect('meus_agendamentos')
+    return redirect(redirect_url)
 
 
 @require_GET
