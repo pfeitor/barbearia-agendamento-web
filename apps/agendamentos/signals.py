@@ -24,3 +24,12 @@ def clear_availability_cache_on_delete(sender, instance, **kwargs):
         professional_id=instance.profissional.id,
         service_id=instance.servico.id
     )
+
+
+@receiver(post_save, sender=Agendamento)
+def notificar_novo_agendamento(sender, instance, created, **kwargs):
+    """Envia e-mail de confirmação de recebimento quando um agendamento é criado."""
+    if created:
+        # Import lazy para evitar circular import entre apps
+        from apps.notificacoes.services import NotificacaoService
+        NotificacaoService.enviar_confirmacao_agendamento(instance)

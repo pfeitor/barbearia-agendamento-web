@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lembrete de Agendamento</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background-color: #f4f4f5; font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a2e; }
+    .wrapper { max-width: 600px; margin: 32px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    .header { background: linear-gradient(135deg, #16213e 0%, #0f3460 100%); padding: 36px 32px; text-align: center; }
+    .header h1 { color: #f0c040; font-size: 24px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .header p { color: #a0a0b8; font-size: 14px; }
+    .badge { display: inline-block; background: #3b82f6; color: #fff; font-size: 13px; font-weight: 600; padding: 4px 14px; border-radius: 20px; margin-top: 12px; }
+    .body { padding: 32px; }
+    .greeting { font-size: 17px; font-weight: 600; margin-bottom: 8px; color: #1a1a2e; }
+    .intro { font-size: 14px; color: #555; line-height: 1.6; margin-bottom: 28px; }
+    .time-hero { text-align: center; background: linear-gradient(135deg, #f0c040 0%, #e8a000 100%); border-radius: 12px; padding: 24px 16px; margin-bottom: 24px; }
+    .time-hero .time-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #7a5500; margin-bottom: 4px; }
+    .time-hero .time-value { font-size: 48px; font-weight: 800; color: #1a1a2e; line-height: 1; }
+    .time-hero .time-date { font-size: 14px; color: #7a5500; margin-top: 4px; font-weight: 600; }
+    .card { background: #f8f8fc; border: 1px solid #e8e8f0; border-radius: 10px; padding: 20px 24px; margin-bottom: 24px; }
+    .card-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #ececf4; }
+    .card-row:last-child { border-bottom: none; }
+    .card-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #888; }
+    .card-value { font-size: 15px; font-weight: 600; color: #1a1a2e; text-align: right; }
+    .info-box { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 14px 18px; border-radius: 0 8px 8px 0; font-size: 13px; color: #555; line-height: 1.6; margin-bottom: 24px; }
+    .footer { background: #f4f4f5; padding: 20px 32px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #e8e8f0; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <!-- Cabeçalho -->
+    <div class="header">
+      <h1>✂️ {{ barbearia_nome }}</h1>
+      <p>Sistema de Agendamento Online</p>
+      <span class="badge">⏰ Lembrete de Hoje</span>
+    </div>
+
+    <!-- Corpo -->
+    <div class="body">
+      <p class="greeting">Bom dia, {{ cliente_nome }}! 👋</p>
+      <p class="intro">
+        Só passando para lembrar que você tem um agendamento marcado para <strong>hoje</strong>.
+        Não se atrase!
+      </p>
+
+      <!-- Hora em destaque -->
+      <div class="time-hero">
+        <div class="time-label">Seu horário de hoje</div>
+        <div class="time-value">{{ data_hora|date:"H:i" }}</div>
+        <div class="time-date">{{ data_hora|date:"d \d\e F \d\e Y" }}</div>
+      </div>
+
+      <!-- Detalhes do agendamento -->
+      <div class="card">
+        <div class="card-row">
+          <span class="card-label">💇 Serviço</span>
+          <span class="card-value">{{ servico_nome }}</span>
+        </div>
+        <div class="card-row">
+          <span class="card-label">👤 Profissional</span>
+          <span class="card-value">{{ profissional_nome }}</span>
+        </div>
+        <div class="card-row">
+          <span class="card-label">📋 Status</span>
+          <span class="card-value">{{ agendamento.get_status_display }}</span>
+        </div>
+      </div>
+
+      <div class="info-box">
+        📍 <strong>Lembrete:</strong> Se precisar cancelar, entre em contato o quanto antes
+        para que o horário possa ser liberado para outro cliente. Obrigado pela compreensão!
+      </div>
+    </div>
+
+    <!-- Rodapé -->
+    <div class="footer">
+      Este e-mail foi enviado automaticamente por <strong>{{ barbearia_nome }}</strong>.<br />
+      Por favor, não responda diretamente a esta mensagem.
+    </div>
+  </div>
+</body>
+</html>

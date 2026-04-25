@@ -14,6 +14,7 @@ O sistema foi projetado para:
 - 👤 Gerenciar clientes e profissionais
 - ⏱️ Controlar disponibilidade de horários
 - 📊 Organizar o fluxo de atendimento
+- ✉️ Notificar clientes por e-mail automaticamente
 
 ---
 
@@ -41,6 +42,13 @@ O sistema foi projetado para:
   - Horário de almoço
   - Duração do serviço
   - Agendamentos existentes
+
+### ✉️ Sistema de Notificações por E-mail
+- **Confirmação de agendamento** — enviada automaticamente ao cliente quando um novo agendamento é criado (status `AGENDADO`)
+- **Lembrete do dia** — enviado toda manhã às 08:00 BRT para agendamentos do dia (`AGENDADO` ou `CONFIRMADO`)
+- Canal: **Gmail SMTP** (gratuito, nativo ao Django)
+- Todos os envios são registrados em `NotificacaoLog` (visível no painel admin)
+- Lembrete diário executado por Cron Job no Render (zero custo adicional)
 
 ---
 
@@ -72,6 +80,7 @@ O sistema foi projetado para:
 | `servico` | Serviços oferecidos com duração e preço |
 | `agendamento` | Agendamentos vinculando cliente, profissional e serviço |
 | `professional_schedule` | Grade de horários semanais por profissional |
+| `notificacao_log` | Histórico de todos os e-mails enviados pelo sistema |
 
 ---
 
@@ -85,13 +94,19 @@ O sistema foi projetado para:
 │   ├── clientes/       # Gestão de clientes
 │   ├── profissionais/  # Profissionais e escalas
 │   ├── servicos/       # Catálogo de serviços
-│   ├── agendamentos/   # Lógica principal
-│   └── notificacoes/   # (em desenvolvimento)
-├── templates/          # Templates HTML
+│   ├── agendamentos/   # Lógica principal de agendamento
+│   └── notificacoes/   # Notificações por e-mail
+│       ├── models.py           # NotificacaoLog
+│       ├── services.py         # NotificacaoService
+│       ├── admin.py            # Painel de logs
+│       └── management/
+│           └── commands/
+│               └── enviar_lembretes.py  # Cron job de lembretes
+├── templates/          # Templates HTML (inclui e-mails)
 ├── static/             # CSS e assets
 ├── requirements/       # Dependências por ambiente
 ├── manage.py
-└── render.yaml         # Deploy
+└── render.yaml         # Deploy (web + cron job)
 
 ````
 
@@ -154,15 +169,28 @@ pip install -r requirements/dev.txt
 
 ### 4. Configurar variáveis de ambiente
 
-Crie um arquivo `.env`:
+Copie o arquivo de exemplo e preencha os valores:
+
+```bash
+cp .env.example .env
+```
 
 ```env
+# Django
 SECRET_KEY=sua-chave-secreta
 DEBUG=True
 ALLOWED_HOSTS=127.0.0.1,localhost
 DATABASE_URL=sqlite:///db.sqlite3
 TIME_ZONE=America/Sao_Paulo
+
+# Notificações por E-mail (Gmail SMTP)
+EMAIL_HOST_USER=seuemail@gmail.com
+EMAIL_HOST_PASSWORD=xxxx-xxxx-xxxx-xxxx  # App Password do Google
+DEFAULT_FROM_EMAIL=seuemail@gmail.com
+BAREBARIA_NOME=Minha Barbearia
 ```
+
+> 💡 Em desenvolvimento, os e-mails são exibidos no terminal (sem precisar de Gmail real). Apenas em produção o SMTP é utilizado.
 
 ---
 
@@ -217,18 +245,52 @@ Retorna:
 
 ---
 
+## ✉️ Notificações por E-mail
+
+### Como funciona
+
+| Momento | Gatilho | Descrição |
+|---------|---------|----------|
+| Criação | Agendamento salvo com status `AGENDADO` | E-mail com detalhes do agendamento enviado automaticamente via Django Signal |
+| Lembrete | Todo dia às 08:00 BRT (Cron Job) | E-mail de lembrete para todos os agendamentos do dia |
+
+### Configurar Gmail SMTP
+
+1. Ative o **2FA** na sua conta Google: [myaccount.google.com/security](https://myaccount.google.com/security)
+2. Gere uma **App Password** em: [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+3. Preencha as variáveis `EMAIL_HOST_USER` e `EMAIL_HOST_PASSWORD` no `.env`
+
+### Testar o lembrete manualmente
+
+```bash
+python manage.py enviar_lembretes
+```
+
+### Logs de notificação
+
+Todos os envios (sucesso ou falha) são registrados na tabela `notificacao_log` e visíveis em:
+
+```
+http://127.0.0.1:8000/admin/notificacoes/notificacaolog/
+```
+
+### Deploy (Render)
+
+O `render.yaml` já inclui um **Cron Job** configurado para rodar `python manage.py enviar_lembretes` diariamente às 08:00 BRT. Adicione as variáveis de e-mail no painel do Render para ativá-lo.
+
+---
+
 ## 📈 Status do Projeto
 
 ✅ Funcional
-🚧 Sistema de notificações em desenvolvimento
+✅ Sistema de notificações por e-mail implementado
 🚀 Pronto para deploy em produção
 
 ---
 
 ## 💡 Próximos Passos
 
-* Integração com WhatsApp (confirmação de agendamento)
-* Notificações automáticas
+* Notificações via WhatsApp (canal adicional, quando aplicável)
 * Interface mais interativa (JavaScript)
 * Sistema de pagamentos
 
