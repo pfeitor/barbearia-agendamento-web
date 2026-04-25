@@ -63,10 +63,8 @@ def simple_final_availability(request):
         
         # Para cada weekday com schedule
         for weekday_banco in schedules_por_weekday.keys():
-            # Encontrar a próxima data com este weekday
+            # Encontrar a próxima data com este weekday (incluindo hoje)
             dias_para_frente = (weekday_banco - hoje.weekday() + 7) % 7
-            if dias_para_frente == 0:
-                dias_para_frente = 7
             
             data = hoje + timedelta(days=dias_para_frente)
             schedule = schedules_por_weekday[weekday_banco]
@@ -103,6 +101,19 @@ def simple_final_availability(request):
                     datetime_inicio = datetime.combine(data, datetime.min.time()).replace(
                         hour=hora_atual, minute=minuto_atual
                     )
+                    
+                    # Verificar se horário está no passado ou muito próximo (margem de 30 min)
+                    agora = datetime.now()
+                    limite_minimo = agora + timedelta(minutes=30)
+                    
+                    # Pular horários passados ou muito próximos
+                    if datetime_inicio < limite_minimo:
+                        # Avançar para próximo slot
+                        minuto_atual += 30
+                        if minuto_atual >= 60:
+                            hora_atual += 1
+                            minuto_atual -= 60
+                        continue
                     
                     # Buscar agendamentos existentes para este profissional neste horário
                     agendamentos_existentes = Agendamento.objects.filter(
