@@ -3,6 +3,7 @@ services:
     name: pi-barbearia
     env: python
     plan: free
+    autoDeploy: false
     buildCommand: pip install -r requirements/prod.txt && python manage.py collectstatic --noinput
     preDeployCommand: python manage.py migrate
     startCommand: gunicorn config.wsgi:application
