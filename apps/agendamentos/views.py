@@ -206,6 +206,69 @@ def cancelar_agendamento(request, pk):
 
 
 @require_GET
+def simple_final_availability(request):
+    """API de slots disponíveis sem paginação — retorna todos os dias de uma vez."""
+    try:
+        professional_id = int(request.GET.get('professional_id', 1))
+        service_id = int(request.GET.get('service_id', 1))
+
+        from apps.profissionais.models import ProfessionalSchedule
+        from apps.servicos.models import Servico
+        from datetime import datetime, timedelta
+
+        try:
+            professional = Profissional.objects.get(id=professional_id, ativo=True)
+            service = Servico.objects.get(id=service_id)
+        except Exception:
+            return JsonResponse({'error': 'Profissional ou serviço não encontrado', 'results': [], 'has_next': False, 'has_previous': False})
+
+        schedules = ProfessionalSchedule.objects.filter(profissional=professional, is_day_off=False).order_by('weekday')
+        if not schedules:
+            return JsonResponse({'results': [], 'has_next': False, 'has_previous': False})
+
+        schedules_por_weekday = {s.weekday: s for s in schedules}
+        hoje = datetime.now().date()
+        dias_semana = {0: "Segunda-feira", 1: "Terça-feira", 2: "Quarta-feira", 3: "Quinta-feira", 4: "Sexta-feira", 5: "Sábado", 6: "Domingo"}
+        results = []
+
+        for weekday_banco, schedule in schedules_por_weekday.items():
+            dias_para_frente = (weekday_banco - hoje.weekday() + 7) % 7
+            data = hoje + timedelta(days=dias_para_frente)
+
+            hora_atual, minuto_atual = schedule.start_time.hour, schedule.start_time.minute
+            hora_fim, minuto_fim = schedule.end_time.hour, schedule.end_time.minute
+            tem_almoco = schedule.lunch_start and schedule.lunch_end
+            agora = datetime.now()
+            limite_minimo = agora + timedelta(minutes=30)
+            slots = []
+
+            while hora_atual < hora_fim or (hora_atual == hora_fim and minuto_atual < minuto_fim):
+                if tem_almoco and hora_atual == schedule.lunch_start.hour:
+                    hora_atual, minuto_atual = schedule.lunch_end.hour, schedule.lunch_end.minute
+                    continue
+                tempo_restante = (hora_fim - hora_atual) * 60 + (minuto_fim - minuto_atual)
+                if tempo_restante >= service.duracao_minutos:
+                    dt_inicio = datetime(data.year, data.month, data.day, hora_atual, minuto_atual)
+                    if dt_inicio >= limite_minimo:
+                        existe = Agendamento.objects.filter(profissional=professional, data_hora_inicio=dt_inicio).exists()
+                        if not existe:
+                            slots.append(f"{hora_atual:02d}:{minuto_atual:02d}")
+                minuto_atual += 30
+                if minuto_atual >= 60:
+                    hora_atual += 1
+                    minuto_atual -= 60
+
+            if slots:
+                results.append({"date": data.isoformat(), "weekday": dias_semana[weekday_banco], "slots": slots})
+
+        results.sort(key=lambda x: x["date"])
+        return JsonResponse({"results": results, "has_next": False, "has_previous": False, "current_page": 1})
+
+    except Exception as e:
+        return JsonResponse({'error': str(e), 'results': [], 'has_next': False, 'has_previous': False}, status=500)
+
+
+@require_GET
 def availability_api_view(request):
     """
     API endpoint to get available time slots for a professional and service.

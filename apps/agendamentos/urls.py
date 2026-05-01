@@ -1,14 +1,14 @@
 from django.urls import path
 from .views import (
-    AgendamentoCreateView, 
-    AgendamentoDeleteView, 
-    AgendamentoListView, 
+    AgendamentoCreateView,
+    AgendamentoDeleteView,
+    AgendamentoListView,
     MeusAgendamentosView,
     availability_api_view,
+    simple_final_availability,
     confirmar_agendamento,
-    cancelar_agendamento
+    cancelar_agendamento,
 )
-from .views_simple_final import simple_final_availability
 
 urlpatterns = [
     # URLs administrativas
