@@ -190,11 +190,6 @@ else:
 
 ---
 
-## 9. Novas features
-[ ] Incluir botão de concluido na rota /agendamentos/ (somente para acesso admin)
-    - Atualmente possui somente opções 'CANCELAR' e 'CONFIRMMAR'
-    - Necessário botão de opção 'CONCLUÍDO', que mudara o status de 'AGENDADO' ou 'CONFIRMADO' para 'CONCLUÍDO', o que significa que o agendamento efetuado foi efetivamente efetuado (cliente atendido).
-
 ## Como Usar em Futuras Sessões
 
 > Antes de responder ou modificar código, leia este arquivo. Ele contém o mapa completo da arquitetura, fluxo e configurações. Não varra o repositório inteiro a menos que seja estritamente necessário para a tarefa. Se precisar de detalhes de um módulo, consulte apenas os caminhos listados na seção "Estrutura de Diretórios" ou "Pontos de Entrada".
