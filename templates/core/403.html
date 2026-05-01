@@ -11,14 +11,14 @@
         <p>Você não tem permissão para acessar esta página.</p>
         
         <div class="error-actions">
-            {% if 'cliente_id' in request.session %}
-                <a href="{% url 'home' %}" class="btn btn-primary">Voltar para Minha Área</a>
-                <a href="{% url 'logout_cliente' %}" class="btn btn-outline">Sair</a>
-            {% elif request.user.is_authenticated %}
+            {% if request.user.is_authenticated and request.user.is_staff %}
                 <a href="{% url 'admin_dashboard' %}" class="btn btn-primary">Painel Administrativo</a>
                 <a href="{% url 'logout_admin' %}" class="btn btn-outline">Sair</a>
+            {% elif request.user.is_authenticated %}
+                <a href="{% url 'home' %}" class="btn btn-primary">Voltar para Minha Área</a>
+                <a href="{% url 'clientes_logout' %}" class="btn btn-outline">Sair</a>
             {% else %}
-                <a href="{% url 'login_cliente' %}" class="btn btn-primary">Login Cliente</a>
+                <a href="{% url 'clientes_login' %}" class="btn btn-primary">Login Cliente</a>
                 <a href="{% url 'login_admin' %}" class="btn btn-outline">Login Admin</a>
             {% endif %}
         </div>

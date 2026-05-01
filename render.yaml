@@ -3,9 +3,9 @@ services:
     name: pi-barbearia
     env: python
     plan: free
-    autoDeploy: false
+    autoDeploy: true
     buildCommand: pip install -r requirements/prod.txt && python manage.py collectstatic --noinput
-    preDeployCommand: python manage.py migrate
+    preDeployCommand: python manage.py bootstrap
     startCommand: gunicorn config.wsgi:application
     envVars:
       - key: DATABASE_URL
@@ -23,6 +23,10 @@ services:
       - key: DEFAULT_FROM_EMAIL
         sync: false
       - key: BARBEARIA_NOME
+        sync: false
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
         sync: false
 
   - type: cron

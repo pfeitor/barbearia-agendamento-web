@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Cadastro — PI Barbearia{% endblock %}
+
+{% block content %}
+<div style="max-width:480px;margin:40px auto;padding:0 20px;">
+  <div style="background:#fff;border-radius:8px;padding:40px;box-shadow:0 2px 12px rgba(0,0,0,.1);">
+    <h2 style="margin:0 0 8px;text-align:center;">Criar conta</h2>
+    <p style="text-align:center;color:#666;margin:0 0 28px;">Preencha seus dados para se cadastrar</p>
+
+    <form method="post">
+      {% csrf_token %}
+      {% for field in form %}
+        <div style="margin-bottom:16px;">
+          <label style="display:block;margin-bottom:4px;font-weight:600;">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<p style="color:#dc3545;font-size:.875em;margin-top:4px;">{{ field.errors.0 }}</p>{% endif %}
+        </div>
+      {% endfor %}
+      <p style="font-size:.85em;color:#666;margin-bottom:16px;">
+        Senha: mínimo 8 caracteres, ao menos 1 maiúscula e 1 número.
+      </p>
+      <button type="submit" style="width:100%;padding:12px;background:#333;color:#fff;border:none;border-radius:4px;font-size:1rem;cursor:pointer;">
+        Criar conta
+      </button>
+    </form>
+
+    <p style="text-align:center;margin:20px 0 0;">
+      Já tem conta? <a href="{% url 'clientes_login' %}">Entrar</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

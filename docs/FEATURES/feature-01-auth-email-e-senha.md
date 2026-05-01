@@ -34,11 +34,11 @@ Substituir a autenticação atual por telefone por um fluxo baseado em `Django U
 3. Admin conclui → atualiza status → dispara `agendamento_concluido` signal → invalida cache de disponibilidade → log.
 
 ## ✅ Critérios de Aceite
-- [ ] Login por telefone desabilitado/removido sem quebrar URLs antigas (redirect 301 ou mensagem clara).
-- [ ] Migração de dados: clientes existentes recebem `ClienteUser` com e-mail temporário ou são obrigados a revalidar.
-- [ ] `ClienteRequiredMixin` adaptada para verificar `request.user.cliente` e `is_active`.
-- [ ] Templates usam `base.html` existente. Mensagens de erro/sucesso via `django.contrib.messages`.
-- [ ] `ARCHITECTURE.md` atualizado com novo fluxo de auth, models e rotas.
+- [x] Login por telefone desabilitado/removido. URLs legadas `/login-cliente/` e `/logout-cliente/` emitem redirect 301 para `/clientes/login/`.
+- [x] Migração de dados: `0002_data_migration.py` cria `ClienteUser(is_active=True, unusable_password)` para cada `Cliente` sem vínculo. Usuário deve resetar a senha pelo fluxo "Esqueci minha senha".
+- [x] `ClienteRequiredMixin` adaptada: verifica `request.user.is_authenticated`, `is_active`, `is_staff=False` e acessa `request.user.perfil` (reverse OneToOneField).
+- [x] Templates usam `base.html` existente. Mensagens de erro/sucesso via `django.contrib.messages`. Nav usa `request.user.is_authenticated`.
+- [x] `ARCHITECTURE.md` atualizado com novo fluxo de auth, models e rotas.
 
 ## ⚠️ Impacto na Arquitetura Atual
 - Substitui `TelefoneBackend` por `ModelBackend` padrão do Django.

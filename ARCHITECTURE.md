@@ -59,18 +59,24 @@ barbearia-agendamento-web/
 | Prefixo | App |
 |---|---|
 | _(raiz)_ | `apps.core` |
-| `clientes/` | `apps.clientes` |
+| `clientes/` | `apps.clientes` (inclui `/login/`, `/registrar/`, `/verificar/`, `/esqueci-senha/`, `/resetar-senha/`) |
 | `profissionais/` | `apps.profissionais` |
 | `servicos/` | `apps.servicos` |
-| `agendamentos/` | `apps.agendamentos` |
+| `agendamentos/` | `apps.agendamentos` (inclui `/<pk>/concluir/`) |
 | `admin/` | Django Admin |
 
 ### Fluxo Principal de Agendamento
 ```
-Cliente (telefone) → ClienteLoginView → sessão com cliente_id
+Cliente (e-mail/senha) → ClienteLoginView → Django auth session (ClienteUser)
 → AgendamentoCreateView → availability_api_view (JSON)
 → AvailabilityService.get_slots() → cache (5 min)
-→ Agendamento.save() → signal → enviar e-mail de confirmação
+→ Agendamento.save() → post_save signal → enviar e-mail de confirmação
+```
+
+### Fluxo de Conclusão de Agendamento (Admin)
+```
+Admin → POST /agendamentos/<pk>/concluir/ → AgendamentoConcluirView (AdminRequiredMixin)
+→ Agendamento.status = CONCLUIDO → post_save signal → invalida cache de disponibilidade
 ```
 
 ### Fluxo de Lembrete (Cron)
@@ -91,19 +97,66 @@ Render cron (11:00 UTC diário) → manage.py enviar_lembretes
 |---|---|---|
 | Model | `*/models.py` | Entidades, validações, constraints de DB |
 | View | `*/views.py` | Orquestração de request/response, autenticação |
-| Service | `*/services.py` | Lógica de negócio isolada (slots, e-mails) |
+| Service | `agendamentos/services.py` | Lógica de slots e disponibilidade |
+| Service | `clientes/services.py` | `AuthService`: verificação de e-mail e reset de senha |
+| Service | `notificacoes/services.py` | Envio de e-mails (confirmação, lembrete, verificação, reset) |
 | Form | `*/forms.py` | Validação de entrada do usuário |
 | Signal | `agendamentos/signals.py` | Efeitos colaterais desacoplados (cache, notificações) |
 | Mixin | `core/mixins.py` | Controle de acesso reutilizável por CBV |
 
-### Autenticação Dual
+### Novos Models (feature-01)
+
+| Model | App | Descrição |
+|---|---|---|
+| `ClienteUser` | `clientes` | AUTH_USER_MODEL; email como USERNAME_FIELD; is_active=False por padrão |
+| `VerificacaoEmail` | `clientes` | Código 6 dígitos, expira 15min, limite 3/hora |
+| `Cliente.cliente_user` | `clientes` | OneToOneField → ClienteUser (null=True para migração) |
+
+### Autenticação por E-mail/Senha
 
 | Perfil | Mecanismo | Backend |
 |---|---|---|
-| Cliente | Sessão por telefone (`cliente_id`) | `TelefoneBackend` (custom) |
-| Admin | Django auth por e-mail | `AdminEmailBackend` (custom) |
+| Cliente | Django auth via `ClienteUser` (email + senha) | `ModelBackend` |
+| Admin | Django auth via `ClienteUser` (is_staff=True) | `AdminEmailBackend` (custom) |
 
-Os dois sistemas são **independentes** — clientes não possuem `User` Django. Acesso protegido pelos mixins `ClienteRequiredMixin` e `AdminRequiredMixin`.
+`AUTH_USER_MODEL = 'clientes.ClienteUser'`. Clientes possuem `ClienteUser` (auth) vinculado ao perfil `Cliente` (dados) via `OneToOneField(related_name='perfil')`. Acesso protegido pelos mixins `ClienteRequiredMixin` (verifica `request.user.perfil`) e `AdminRequiredMixin` (verifica `is_staff`).
+
+### Fluxo de Registro e Verificação de E-mail
+
+```
+POST /clientes/registrar/ → ClienteRegisterView
+  → ClienteUser(is_active=False) + Cliente criados
+  → AuthService.gerar_e_enviar_codigo() → VerificacaoEmail (expira 15min, limite 3/hora)
+  → NotificacaoService.enviar_email_verificacao() → Gmail SMTP
+
+POST /clientes/verificar/ → VerificarEmailView
+  → AuthService.verificar_codigo() → ClienteUser.is_active=True → login automático
+```
+
+### Fluxo de Reset de Senha
+
+```
+POST /clientes/esqueci-senha/ → EsqueciSenhaView
+  → AuthService.enviar_link_reset(cliente_user, request)
+  → default_token_generator.make_token() (HMAC+timestamp, expira 1h via PASSWORD_RESET_TIMEOUT)
+  → NotificacaoService.enviar_email_reset_senha() → request.build_absolute_uri() → Gmail SMTP
+
+POST /clientes/resetar-senha/<uidb64>/<token>/ → ResetarSenhaView
+  → AuthService.validar_token_reset() → ClienteUser.set_password() → is_active=True
+```
+
+> `request.build_absolute_uri()` garante que o link no e-mail inclui o domínio correto em todos os ambientes (`http://127.0.0.1:8000` local, `https://barbearia-agendamento-web.onrender.com` em produção).
+
+### Validações de Senha
+
+- Mínimo 8 caracteres (`MinimumLengthValidator`)
+- Ao menos 1 letra maiúscula e 1 dígito (validação customizada nos formulários)
+- Não pode ser puramente numérica (`NumericPasswordValidator`)
+- Configurado em `AUTH_PASSWORD_VALIDATORS` em `config/settings/base.py`
+
+### Conclusão de Agendamento (Admin)
+
+`AgendamentoConcluirView` (POST-only, `AdminRequiredMixin`) transiciona `AGENDADO` ou `CONFIRMADO` → `CONCLUIDO`. O `post_save` signal existente invalida o cache de disponibilidade automaticamente.
 
 ### Disponibilidade com Cache
 
@@ -127,6 +180,7 @@ Os dois sistemas são **independentes** — clientes não possuem `User` Django.
 | `DEFAULT_FROM_EMAIL` | Endereço remetente |
 | `BARBEARIA_NOME` | Nome exibido nos e-mails |
 | `DJANGO_SUPERUSER_*` | Criação automática de superuser via `bootstrap` |
+| `PASSWORD_RESET_TIMEOUT` | TTL do token de reset de senha em segundos (padrão: `3600`) |
 
 ### Deploy (Render.com — `render.yaml`)
 
@@ -185,8 +239,7 @@ else:
 | `secret_key.txt` no repositório | Arquivo gerado localmente; verificar `.gitignore` |
 | Cache em memória local | `django.core.cache.backends.locmem` — não compartilhado entre workers/instâncias |
 | Sem task queue | Notificações síncronas no request cycle; lembretes via cron externo |
-| Clientes sem `User` Django | Impossibilita uso de funcionalidades nativas (reset de senha, permissions, etc.) |
-| URL duplicada em `core/urls.py` | `meus-agendamentos/` mapeada para `HomeView` em vez de redirecionar corretamente |
+| `Cliente.cliente_user` nullable | OneToOneField com null=True; clientes criados pelo admin via painel CRUD não possuem `ClienteUser`. Clientes pré-existentes recebem `ClienteUser` via migração `0002` (senha inutilizável, devem resetar). |
 
 ---
 
