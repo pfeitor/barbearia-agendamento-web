@@ -105,20 +105,7 @@
   <div class="header-content">
     <h1>PI Barbearia</h1>
     <nav>
-      {% if 'cliente_id' in request.session %}
-        <!-- Menu Cliente -->
-        <a href="{% url 'home' %}">Início</a>
-        <a href="{% url 'agendamentos_create' %}">Novo Agendamento</a>
-        <a href="{% url 'meus_agendamentos' %}">Meus Agendamentos</a>
-        <a href="{% url 'meus_dados' %}">Meus Dados</a>
-        <div class="user-info">
-          <span>Olá, {{ request.cliente.nome }}</span>
-          <form method="post" action="{% url 'logout_cliente' %}" style="display:inline;">
-            {% csrf_token %}
-            <button type="submit" class="btn-logout">Sair</button>
-          </form>
-        </div>
-      {% elif request.user.is_authenticated and request.user.is_staff %}
+      {% if request.user.is_authenticated and request.user.is_staff %}
         <!-- Menu Admin -->
         <a href="{% url 'admin_dashboard' %}">Painel</a>
         <a href="{% url 'clientes_lista' %}">Clientes</a>
@@ -127,15 +114,30 @@
         <a href="{% url 'agendamentos_lista' %}">Agendamentos</a>
         <a href="/admin/">Django Admin</a>
         <div class="user-info">
-          <span>Olá, {{ user.get_full_name|default:user.username }}</span>
+          <span>Olá, {{ user.get_full_name|default:user.email }}</span>
           <form method="post" action="{% url 'logout_admin' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn-logout">Sair</button>
+          </form>
+        </div>
+      {% elif request.user.is_authenticated and request.user.is_active %}
+        <!-- Menu Cliente -->
+        <a href="{% url 'home' %}">Início</a>
+        <a href="{% url 'agendamentos_create' %}">Novo Agendamento</a>
+        <a href="{% url 'meus_agendamentos' %}">Meus Agendamentos</a>
+        <a href="{% url 'meus_dados' %}">Meus Dados</a>
+        <div class="user-info">
+          {% with perfil=request.user.perfil %}
+          <span>Olá, {{ perfil.nome }}</span>
+          {% endwith %}
+          <form method="post" action="{% url 'clientes_logout' %}" style="display:inline;">
             {% csrf_token %}
             <button type="submit" class="btn-logout">Sair</button>
           </form>
         </div>
       {% else %}
         <!-- Menu Público -->
-        <a href="{% url 'login_cliente' %}">Área do Cliente</a>
+        <a href="{% url 'clientes_login' %}">Área do Cliente</a>
         <div class="user-info">
           <a href="{% url 'login_admin' %}" style="font-size: 0.9em; opacity: 0.8;">Acesso Admin</a>
         </div>

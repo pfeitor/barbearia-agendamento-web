@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:20px;">
+  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1);">
+    <div style="background:#333;padding:24px;text-align:center;">
+      <h1 style="color:#fff;margin:0;font-size:1.4rem;">{{ barbearia_nome }}</h1>
+    </div>
+    <div style="padding:32px;">
+      <h2 style="margin:0 0 16px;color:#222;">Confirme seu e-mail</h2>
+      <p style="color:#444;line-height:1.6;margin:0 0 24px;">
+        Use o código abaixo para verificar sua conta. Ele é válido por <strong>15 minutos</strong>.
+      </p>
+      <div style="background:#f8f8f8;border:2px dashed #ccc;border-radius:8px;padding:24px;text-align:center;margin-bottom:24px;">
+        <span style="font-size:2.5rem;font-weight:700;letter-spacing:12px;color:#333;">{{ codigo }}</span>
+      </div>
+      <p style="color:#666;font-size:.875rem;margin:0;">
+        Se você não criou uma conta em {{ barbearia_nome }}, ignore este e-mail.
+      </p>
+    </div>
+    <div style="background:#f8f8f8;padding:16px;text-align:center;">
+      <p style="color:#999;font-size:.8rem;margin:0;">{{ barbearia_nome }} — Sistema de Agendamentos</p>
+    </div>
+  </div>
+</body>
+</html>

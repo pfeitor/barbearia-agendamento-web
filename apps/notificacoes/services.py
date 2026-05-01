@@ -42,6 +42,64 @@ class NotificacaoService:
             template="notificacoes/email_lembrete_dia.html",
         )
 
+    # ─── Auth: verificação de e-mail ──────────────────────────────────────────
+
+    @staticmethod
+    def enviar_email_verificacao(cliente_user, codigo):
+        """Envia código de verificação de 6 dígitos ao novo usuário."""
+        context = {
+            'email': cliente_user.email,
+            'codigo': codigo,
+            'barbearia_nome': settings.BARBEARIA_NOME,
+        }
+        html_body = render_to_string('notificacoes/email_verificacao.html', context)
+        text_body = f"Seu código de verificação é: {codigo}\nExpira em 15 minutos."
+
+        msg = EmailMultiAlternatives(
+            subject=f"Verificação de e-mail — {settings.BARBEARIA_NOME}",
+            body=text_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[cliente_user.email],
+        )
+        msg.attach_alternative(html_body, "text/html")
+        try:
+            msg.send(fail_silently=False)
+            logger.info("E-mail de verificação enviado para %s", cliente_user.email)
+        except Exception as exc:
+            logger.error("Falha ao enviar e-mail de verificação para %s: %s", cliente_user.email, exc)
+            raise
+
+    # ─── Auth: reset de senha ─────────────────────────────────────────────────
+
+    @staticmethod
+    def enviar_email_reset_senha(cliente_user, uidb64, token, request):
+        """Envia link de redefinição de senha (expira em 1h via PASSWORD_RESET_TIMEOUT).
+        request é necessário para construir a URL absoluta correta em cada ambiente.
+        """
+        path = f"/clientes/resetar-senha/{uidb64}/{token}/"
+        link = request.build_absolute_uri(path)
+        context = {
+            'email': cliente_user.email,
+            'link': link,
+            'barbearia_nome': settings.BARBEARIA_NOME,
+        }
+        html_body = render_to_string('notificacoes/email_reset_senha.html', context)
+        text_body = f"Redefina sua senha acessando: {link}\nExpira em 1 hora."
+
+        msg = EmailMultiAlternatives(
+            subject=f"Redefinir senha — {settings.BARBEARIA_NOME}",
+            body=text_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[cliente_user.email],
+        )
+        msg.attach_alternative(html_body, "text/html")
+        try:
+            msg.send(fail_silently=False)
+            logger.info("E-mail de reset enviado para %s", cliente_user.email)
+        except Exception as exc:
+            logger.error("Falha ao enviar e-mail de reset para %s: %s", cliente_user.email, exc)
+            raise
+
     # ─── Lógica central ───────────────────────────────────────────────────────
 
     @staticmethod

@@ -12,14 +12,14 @@ class Command(BaseCommand):
         self.stdout.write("Aplicando migrations...")
         call_command("migrate", interactive=False)
 
-        username = os.getenv("DJANGO_SUPERUSER_USERNAME")
         email = os.getenv("DJANGO_SUPERUSER_EMAIL")
         password = os.getenv("DJANGO_SUPERUSER_PASSWORD")
 
-        if not username or not email or not password:
+        if not email or not password:
             self.stdout.write(
                 self.style.WARNING(
-                    "Variáveis de superusuário não definidas. Pulando criação do admin."
+                    "DJANGO_SUPERUSER_EMAIL ou DJANGO_SUPERUSER_PASSWORD não definidos. "
+                    "Pulando criação do admin."
                 )
             )
             return
@@ -27,19 +27,15 @@ class Command(BaseCommand):
         User = get_user_model()
 
         try:
-            if User.objects.filter(username=username).exists():
+            if User.objects.filter(email=email).exists():
                 self.stdout.write(
-                    self.style.SUCCESS(f"Superusuário '{username}' já existe.")
+                    self.style.SUCCESS(f"Superusuário '{email}' já existe.")
                 )
                 return
 
-            User.objects.create_superuser(
-                username=username,
-                email=email,
-                password=password,
-            )
+            User.objects.create_superuser(email=email, password=password)
             self.stdout.write(
-                self.style.SUCCESS(f"Superusuário '{username}' criado com sucesso.")
+                self.style.SUCCESS(f"Superusuário '{email}' criado com sucesso.")
             )
         except (OperationalError, ProgrammingError) as exc:
             self.stderr.write(self.style.ERROR(f"Erro ao criar superusuário: {exc}"))

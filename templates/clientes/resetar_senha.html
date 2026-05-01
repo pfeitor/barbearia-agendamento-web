@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Nova senha — PI Barbearia{% endblock %}
+
+{% block content %}
+<div style="max-width:420px;margin:60px auto;padding:0 20px;">
+  <div style="background:#fff;border-radius:8px;padding:40px;box-shadow:0 2px 12px rgba(0,0,0,.1);">
+    <h2 style="margin:0 0 12px;text-align:center;">Redefinir senha</h2>
+    <p style="color:#555;margin:0 0 24px;text-align:center;">
+      Escolha uma nova senha. Mínimo 8 caracteres, ao menos 1 maiúscula e 1 número.
+    </p>
+
+    <form method="post">
+      {% csrf_token %}
+      {% for field in form %}
+        <div style="margin-bottom:16px;">
+          <label style="display:block;margin-bottom:4px;font-weight:600;">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<p style="color:#dc3545;font-size:.875em;margin-top:4px;">{{ field.errors.0 }}</p>{% endif %}
+        </div>
+      {% endfor %}
+      <button type="submit" style="width:100%;padding:12px;background:#333;color:#fff;border:none;border-radius:4px;font-size:1rem;cursor:pointer;">
+        Salvar nova senha
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

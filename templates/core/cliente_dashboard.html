@@ -17,9 +17,10 @@
         <a href="{% url 'meus_dados' %}" class="btn btn-secondary">
             Meus Dados
         </a>
-        <a href="{% url 'logout_cliente' %}" class="btn btn-outline">
-            Sair
-        </a>
+        <form method="post" action="{% url 'clientes_logout' %}" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline">Sair</button>
+        </form>
     </div>
     
     <div class="agendamentos-section">

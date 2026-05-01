@@ -9,6 +9,9 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 ALLOWED_HOSTS = [host.strip() for host in os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if host.strip()]
 TIME_ZONE = os.getenv("TIME_ZONE", "America/Sao_Paulo")
 
+# Deve ser declarado antes de qualquer model que referencie o usuário
+AUTH_USER_MODEL = 'clientes.ClienteUser'
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -56,7 +59,6 @@ ASGI_APPLICATION = "config.asgi.application"
 
 # Usar SQLite durante build, PostgreSQL em produção
 if os.getenv("RENDER_SERVICE_TYPE") == "web" and not os.getenv("RENDER_BUILD_ID"):
-    # Em produção (deploy rodando)
     DATABASES = {
         "default": dj_database_url.config(
             default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
@@ -66,7 +68,6 @@ if os.getenv("RENDER_SERVICE_TYPE") == "web" and not os.getenv("RENDER_BUILD_ID"
         )
     }
 else:
-    # Durante build ou local
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -82,18 +83,22 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
-# Configurações de autenticação
-AUTHENTICATION_BACKENDS = [
-    'apps.core.backends.AdminEmailBackend',
-    'django.contrib.auth.backends.ModelBackend',  # Para Django Admin
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 8}},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# URLs de redirecionamento
-LOGIN_URL = "/login-cliente/"
-LOGIN_REDIRECT_URL = "/"
-LOGOUT_REDIRECT_URL = "/login-cliente/"
+AUTHENTICATION_BACKENDS = [
+    'apps.core.backends.AdminEmailBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
-# Handler para 403
+LOGIN_URL = "/clientes/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/clientes/login/"
+
+PASSWORD_RESET_TIMEOUT = 3600  # tokens de reset expiram em 1 hora
+
 HANDLER403 = 'apps.core.views.permission_denied'
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
