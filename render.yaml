@@ -6,7 +6,7 @@ services:
     autoDeploy: true
     buildCommand: pip install -r requirements/prod.txt && python manage.py collectstatic --noinput
     preDeployCommand: python manage.py bootstrap
-    startCommand: python manage.py migrate && gunicorn config.wsgi:application
+    startCommand: python manage.py bootstrap && gunicorn config.wsgi:application
     envVars:
       - key: DATABASE_URL
         sync: false

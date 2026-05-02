@@ -6,7 +6,7 @@ from django.db.utils import OperationalError, ProgrammingError
 
 
 class Command(BaseCommand):
-    help = "Aplica migrations e garante um superusuário inicial."
+    help = "Aplica migrations e garante um superusuário inicial (cria ou atualiza senha)."
 
     def handle(self, *args, **options):
         self.stdout.write("Aplicando migrations...")
@@ -19,7 +19,7 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.WARNING(
                     "DJANGO_SUPERUSER_EMAIL ou DJANGO_SUPERUSER_PASSWORD não definidos. "
-                    "Pulando criação do admin."
+                    "Pulando gestão do admin."
                 )
             )
             return
@@ -27,15 +27,20 @@ class Command(BaseCommand):
         User = get_user_model()
 
         try:
-            if User.objects.filter(email=email).exists():
-                self.stdout.write(
-                    self.style.SUCCESS(f"Superusuário '{email}' já existe.")
-                )
-                return
-
-            User.objects.create_superuser(email=email, password=password)
-            self.stdout.write(
-                self.style.SUCCESS(f"Superusuário '{email}' criado com sucesso.")
+            user, created = User.objects.get_or_create(
+                email=email,
+                defaults={"is_staff": True, "is_superuser": True, "is_active": True},
             )
+            user.set_password(password)
+            if not user.is_staff:
+                user.is_staff = True
+            if not user.is_active:
+                user.is_active = True
+            user.save()
+
+            if created:
+                self.stdout.write(self.style.SUCCESS(f"Superusuário '{email}' criado."))
+            else:
+                self.stdout.write(self.style.SUCCESS(f"Senha do superusuário '{email}' atualizada."))
         except (OperationalError, ProgrammingError) as exc:
-            self.stderr.write(self.style.ERROR(f"Erro ao criar superusuário: {exc}"))
+            self.stderr.write(self.style.ERROR(f"Erro ao gerir superusuário: {exc}"))
