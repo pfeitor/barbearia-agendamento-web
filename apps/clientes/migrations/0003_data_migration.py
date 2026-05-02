@@ -8,7 +8,7 @@ sistema de auth por e-mail (ex.: produção em Render).
 """
 
 from django.db import migrations
-import secrets
+from django.contrib.auth.hashers import make_password
 
 
 def criar_cliente_users(apps, schema_editor):
@@ -25,11 +25,12 @@ def criar_cliente_users(apps, schema_editor):
         else:
             cliente_user = ClienteUser(
                 email=cliente.email,
-                is_active=True,   # já era cliente válido
+                is_active=True,
                 is_staff=False,
+                # make_password(None) gera o marcador de senha inutilizável ('!...')
+                # sem depender de métodos do modelo histórico
+                password=make_password(None),
             )
-            # Senha inutilizável — cliente deve usar reset de senha
-            cliente_user.set_unusable_password()
             cliente_user.save()
 
         cliente.cliente_user = cliente_user
@@ -37,13 +38,14 @@ def criar_cliente_users(apps, schema_editor):
 
 
 def desfazer_criacao(apps, schema_editor):
-    """Desfaz apenas os ClienteUser criados por esta migration (sem senha utilizável)."""
+    """Desfaz apenas os ClienteUser criados por esta migration (senha inutilizável)."""
     Cliente = apps.get_model('clientes', 'Cliente')
     ClienteUser = apps.get_model('clientes', 'ClienteUser')
 
     for cliente in Cliente.objects.filter(cliente_user__isnull=False):
         cu = cliente.cliente_user
-        if not cu.has_usable_password():
+        # Senha inutilizável começa com '!' — equivale a has_usable_password() = False
+        if cu.password and cu.password.startswith('!'):
             cliente.cliente_user = None
             cliente.save(update_fields=['cliente_user'])
             cu.delete()
