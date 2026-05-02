@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.urls import reverse_lazy
@@ -222,6 +224,8 @@ class EsqueciSenhaView(FormView):
     form_class = EsqueciSenhaForm
 
     def form_valid(self, form):
+        logger = logging.getLogger(__name__)
+
         email = form.cleaned_data['email']
 
         try:
@@ -229,6 +233,9 @@ class EsqueciSenhaView(FormView):
             AuthService.enviar_link_reset(cliente_user, self.request)
         except ClienteUser.DoesNotExist:
             pass  # Não revela se o e-mail existe
+        except Exception:
+            logger.exception("Falha ao enviar e-mail de reset para %s", email)
+            # Não revela ao usuário que o envio falhou
 
         messages.success(
             self.request,
