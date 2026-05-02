@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:20px;">
+  <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1);">
+    <div style="background:#333;padding:24px;text-align:center;">
+      <h1 style="color:#fff;margin:0;font-size:1.4rem;">{{ barbearia_nome }}</h1>
+    </div>
+    <div style="padding:32px;">
+      {% if dias_para_agendamento == 0 %}
+        <h2 style="margin:0 0 8px;color:#222;">Seu agendamento é hoje!</h2>
+        <p style="color:#555;line-height:1.6;margin:0 0 24px;">Não se esqueça — você tem um horário marcado. Confirme sua presença com um clique.</p>
+      {% else %}
+        <h2 style="margin:0 0 8px;color:#222;">Lembrete de agendamento</h2>
+        <p style="color:#555;line-height:1.6;margin:0 0 24px;">Seu agendamento está marcado para daqui a <strong>{{ dias_para_agendamento }} dia(s)</strong>. Confirme ou cancele abaixo.</p>
+      {% endif %}
+
+      <div style="background:#f8f8f8;border-radius:8px;padding:20px;margin-bottom:28px;">
+        <table style="width:100%;border-collapse:collapse;font-size:.95rem;color:#333;">
+          <tr><td style="padding:6px 0;color:#888;width:40%;">Cliente</td><td style="padding:6px 0;font-weight:600;">{{ cliente_nome }}</td></tr>
+          <tr><td style="padding:6px 0;color:#888;">Serviço</td><td style="padding:6px 0;font-weight:600;">{{ servico_nome }}</td></tr>
+          <tr><td style="padding:6px 0;color:#888;">Profissional</td><td style="padding:6px 0;font-weight:600;">{{ profissional_nome }}</td></tr>
+          <tr><td style="padding:6px 0;color:#888;">Data e hora</td><td style="padding:6px 0;font-weight:600;">{{ data_hora|date:"d/m/Y" }} às {{ data_hora|time:"H:i" }}</td></tr>
+        </table>
+      </div>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <a href="{{ link_confirmar }}"
+           style="flex:1;min-width:140px;display:inline-block;padding:14px 24px;background:#2d6a4f;color:#fff;text-decoration:none;border-radius:6px;text-align:center;font-weight:700;font-size:1rem;">
+          ✅ Confirmar presença
+        </a>
+        <a href="{{ link_cancelar }}"
+           style="flex:1;min-width:140px;display:inline-block;padding:14px 24px;background:#c0392b;color:#fff;text-decoration:none;border-radius:6px;text-align:center;font-weight:700;font-size:1rem;">
+          ❌ Cancelar agendamento
+        </a>
+      </div>
+
+      <p style="color:#999;font-size:.8rem;margin-top:24px;margin-bottom:0;">
+        Se você não reconhece este agendamento, ignore este e-mail. O link expira no momento do próprio agendamento.
+      </p>
+    </div>
+    <div style="background:#f8f8f8;padding:16px;text-align:center;">
+      <p style="color:#999;font-size:.8rem;margin:0;">{{ barbearia_nome }} — Sistema de Agendamentos</p>
+    </div>
+  </div>
+</body>
+</html>

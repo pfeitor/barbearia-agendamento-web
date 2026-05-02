@@ -21,10 +21,14 @@ O sistema foi projetado para:
 ## 🧠 Funcionalidades
 
 ### 👤 Cliente
-- Login simplificado por telefone
+- Cadastro com e-mail e senha
+- Verificação de e-mail (código de 6 dígitos, expira em 15 min)
+- Login por e-mail e senha
+- Recuperação de senha por link seguro (expira em 1h)
 - Criar agendamentos
 - Visualizar agendamentos
-- Atualizar dados pessoais
+- Cancelar agendamentos
+- **Confirmar ou cancelar agendamento por link seguro no e-mail** (sem precisar fazer login)
 
 ### 🛠️ Administração
 - Dashboard administrativo
@@ -45,7 +49,7 @@ O sistema foi projetado para:
 
 ### ✉️ Sistema de Notificações por E-mail
 - **Confirmação de agendamento** — enviada automaticamente ao cliente quando um novo agendamento é criado (status `AGENDADO`)
-- **Lembrete do dia** — enviado toda manhã às 08:00 BRT para agendamentos do dia (`AGENDADO` ou `CONFIRMADO`)
+- **Lembrete com link de ação** — enviado nos dias D-3, D-1 e D-0 (configurável) para agendamentos pendentes; o cliente confirma ou cancela com um clique, sem precisar fazer login
 - Canal: **Gmail SMTP** (gratuito, nativo ao Django)
 - Todos os envios são registrados em `NotificacaoLog` (visível no painel admin)
 - Lembrete diário executado por Cron Job no Render (zero custo adicional)
@@ -80,6 +84,7 @@ O sistema foi projetado para:
 | `servico` | Serviços oferecidos com duração e preço |
 | `agendamento` | Agendamentos vinculando cliente, profissional e serviço |
 | `professional_schedule` | Grade de horários semanais por profissional |
+| `token_confirmacao_agendamento` | Tokens URL-safe para confirmação/cancelamento por link (expira no horário do agendamento) |
 | `notificacao_log` | Histórico de todos os e-mails enviados pelo sistema |
 
 ---
@@ -114,15 +119,18 @@ O sistema foi projetado para:
 
 ## 🔐 Autenticação
 
-O sistema possui dois tipos de acesso:
+O sistema possui dois tipos de acesso, ambos via e-mail e senha (`AUTH_USER_MODEL = 'clientes.ClienteUser'`):
 
-- 👤 **Cliente**
-  - Login via telefone (sem senha)
-  - Sessão personalizada
+- 👤 **Cliente** — `/clientes/login/`
+  - Cadastro com verificação de e-mail (código 6 dígitos, expira 15 min)
+  - Login por e-mail e senha
+  - Recuperação de senha por link com token HMAC (expira 1h)
+  - Acesso restrito às próprias páginas via `ClienteRequiredMixin`
 
-- 🛠️ **Administrador**
-  - Login padrão Django (email + senha)
-  - Acesso total ao sistema
+- 🛠️ **Administrador** — `/clientes/login/` (is_staff=True)
+  - Login por e-mail e senha
+  - Acesso total ao sistema via `AdminRequiredMixin`
+  - Autenticação via `AdminEmailBackend` (custom)
 
 ---
 
@@ -187,7 +195,15 @@ TIME_ZONE=America/Sao_Paulo
 EMAIL_HOST_USER=seuemail@gmail.com
 EMAIL_HOST_PASSWORD=xxxx-xxxx-xxxx-xxxx  # App Password do Google
 DEFAULT_FROM_EMAIL=seuemail@gmail.com
-BAREBARIA_NOME=Minha Barbearia
+BARBEARIA_NOME=Minha Barbearia
+
+# Links nos e-mails de lembrete
+SITE_URL=http://127.0.0.1:8000
+LEMBRETE_DIAS_ANTECEDENCIA=3,1,0
+
+# Superusuário (criado automaticamente via bootstrap)
+DJANGO_SUPERUSER_EMAIL=admin@example.com
+DJANGO_SUPERUSER_PASSWORD=SenhaSegura123
 ```
 
 > 💡 Em desenvolvimento, os e-mails são exibidos no terminal (sem precisar de Gmail real). Apenas em produção o SMTP é utilizado.
@@ -221,8 +237,8 @@ python manage.py runserver
 ### 8. Acessar sistema
 
 * App: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+* Login (clientes e admins): [http://127.0.0.1:8000/clientes/login/](http://127.0.0.1:8000/clientes/login/)
 * Admin Django: [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/)
-* Painel Admin: [http://127.0.0.1:8000/login-admin/](http://127.0.0.1:8000/login-admin/)
 
 ---
 
@@ -252,7 +268,14 @@ Retorna:
 | Momento | Gatilho | Descrição |
 |---------|---------|----------|
 | Criação | Agendamento salvo com status `AGENDADO` | E-mail com detalhes do agendamento enviado automaticamente via Django Signal |
-| Lembrete | Todo dia às 08:00 BRT (Cron Job) | E-mail de lembrete para todos os agendamentos do dia |
+| Lembrete D-3, D-1, D-0 | Cron Job diário às 11:00 UTC | E-mail com botões "Confirmar" e "Cancelar"; cliente age sem precisar de login. Intervalos configuráveis via `LEMBRETE_DIAS_ANTECEDENCIA` |
+
+### Fluxo do link de confirmação
+
+1. O cron gera (ou reutiliza) um token seguro por agendamento
+2. O cliente recebe o e-mail e clica em **Confirmar** ou **Cancelar**
+3. A view pública `/agendamentos/responder/<token>/` processa a ação e transiciona o status
+4. Agendamentos já `CONFIRMADO` ou `CANCELADO` saem do filtro e não recebem novos lembretes
 
 ### Configurar Gmail SMTP
 
@@ -282,17 +305,10 @@ O `render.yaml` já inclui um **Cron Job** configurado para rodar `python manage
 
 ## 📈 Status do Projeto
 
-✅ Funcional
-✅ Sistema de notificações por e-mail implementado
+✅ Funcional  
+✅ Autenticação por e-mail/senha com verificação de e-mail e reset de senha  
+✅ Sistema de notificações com lembrete ativo por link de confirmação  
 🚀 Pronto para deploy em produção
-
----
-
-## 💡 Próximos Passos
-
-* Notificações via WhatsApp (canal adicional, quando aplicável)
-* Interface mais interativa (JavaScript)
-* Sistema de pagamentos
 
 ---
 

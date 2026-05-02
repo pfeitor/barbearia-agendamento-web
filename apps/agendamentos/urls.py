@@ -6,6 +6,7 @@ from .views import (
     AgendamentoDeleteView,
     AgendamentoListView,
     MeusAgendamentosView,
+    ResponderConfirmacaoView,
     availability_api_view,
     cancelar_agendamento,
     confirmar_agendamento,
@@ -23,6 +24,9 @@ urlpatterns = [
     path("meus-agendamentos/", MeusAgendamentosView.as_view(), name="meus_agendamentos"),
     path("<int:pk>/confirmar/", confirmar_agendamento, name="confirmar_agendamento"),
     path("<int:pk>/cancelar/", cancelar_agendamento, name="cancelar_agendamento"),
+
+    # Confirmação por link (público, sem login)
+    path("responder/<str:token>/", ResponderConfirmacaoView.as_view(), name="responder_confirmacao"),
 
     # API de disponibilidade
     path("availability/", availability_api_view, name="availability_api"),

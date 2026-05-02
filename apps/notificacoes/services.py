@@ -42,6 +42,73 @@ class NotificacaoService:
             template="notificacoes/email_lembrete_dia.html",
         )
 
+    # ─── Ponto de entrada: lembrete com link de confirmação ───────────────────
+
+    @staticmethod
+    def enviar_lembrete_com_link(agendamento, link_confirmar, link_cancelar, dias_para_agendamento: int):
+        """
+        Lembrete ativo com botões de ação. Registra NotificacaoLog tipo LEMBRETE_COM_LINK.
+        """
+        from apps.notificacoes.models import NotificacaoLog
+
+        destinatario = agendamento.cliente.email
+        context = {
+            "agendamento": agendamento,
+            "barbearia_nome": settings.BARBEARIA_NOME,
+            "cliente_nome": agendamento.cliente.nome,
+            "profissional_nome": agendamento.profissional.nome,
+            "servico_nome": agendamento.servico.nome,
+            "data_hora": timezone.localtime(agendamento.data_hora_inicio),
+            "link_confirmar": link_confirmar,
+            "link_cancelar": link_cancelar,
+            "dias_para_agendamento": dias_para_agendamento,
+        }
+
+        if dias_para_agendamento == 0:
+            subject = f"⏰ Seu agendamento é hoje — {settings.BARBEARIA_NOME}"
+        else:
+            subject = f"🗓️ Lembrete: agendamento em {dias_para_agendamento} dia(s) — {settings.BARBEARIA_NOME}"
+
+        try:
+            html_body = render_to_string("notificacoes/email_lembrete_com_link.html", context)
+            text_body = (
+                f"Olá, {context['cliente_nome']}!\n\n"
+                f"Confirmar: {link_confirmar}\n"
+                f"Cancelar: {link_cancelar}\n"
+            )
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=text_body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[destinatario],
+            )
+            msg.attach_alternative(html_body, "text/html")
+            msg.send(fail_silently=False)
+
+            NotificacaoLog.objects.create(
+                agendamento=agendamento,
+                tipo="LEMBRETE_COM_LINK",
+                destinatario=destinatario,
+                status="ENVIADO",
+            )
+            logger.info(
+                "Lembrete com link enviado para %s (agendamento #%s, D-%s)",
+                destinatario, agendamento.pk, dias_para_agendamento,
+            )
+        except Exception as exc:
+            erro_msg = str(exc)
+            NotificacaoLog.objects.create(
+                agendamento=agendamento,
+                tipo="LEMBRETE_COM_LINK",
+                destinatario=destinatario,
+                status="FALHOU",
+                erro=erro_msg,
+            )
+            logger.error(
+                "Falha ao enviar lembrete com link para %s (agendamento #%s): %s",
+                destinatario, agendamento.pk, erro_msg,
+            )
+
     # ─── Auth: verificação de e-mail ──────────────────────────────────────────
 
     @staticmethod

@@ -7,6 +7,7 @@ class NotificacaoLog(models.Model):
     class Tipo(models.TextChoices):
         CONFIRMACAO_SOLICITADA = "CONFIRMACAO_SOLICITADA", "Solicitação de Confirmação"
         LEMBRETE_DIA = "LEMBRETE_DIA", "Lembrete do Dia"
+        LEMBRETE_COM_LINK = "LEMBRETE_COM_LINK", "Lembrete com Link de Confirmação"
 
     class Status(models.TextChoices):
         ENVIADO = "ENVIADO", "Enviado"

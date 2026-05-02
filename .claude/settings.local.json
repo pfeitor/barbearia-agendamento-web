@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python manage.py makemigrations agendamentos --name token_confirmacao_agendamento)",
+      "Bash(python manage.py migrate)",
+      "Bash(python manage.py check)"
+    ]
+  }
+}

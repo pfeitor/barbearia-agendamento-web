@@ -1,5 +1,6 @@
 """Availability calculation services for barber shop scheduling system."""
 
+import secrets
 from datetime import datetime, timedelta, time, date
 from typing import List, Dict, Optional, Tuple
 from django.utils import timezone
@@ -282,3 +283,70 @@ class AvailabilityService:
             # Clear all caches for this professional
             keys = cache.keys(f"availability_{professional_id}_*")
             cache.delete_many(keys)
+
+
+class ConfirmacaoLinkService:
+    """Gerencia tokens de confirmação/cancelamento de agendamentos por link."""
+
+    @staticmethod
+    def obter_ou_criar_token(agendamento):
+        """
+        Retorna token existente se ainda válido (não usado e não expirado).
+        Gera novo token caso contrário, garantindo reuso entre múltiplos lembretes.
+        """
+        from apps.agendamentos.models import TokenConfirmacaoAgendamento
+
+        agora = timezone.now()
+        try:
+            token_obj = agendamento.token_confirmacao
+            if token_obj.usado_em is None and token_obj.expires_at > agora:
+                return token_obj
+            # Token expirado ou já usado — gera novo
+            token_obj.delete()
+        except TokenConfirmacaoAgendamento.DoesNotExist:
+            pass
+
+        return TokenConfirmacaoAgendamento.objects.create(
+            agendamento=agendamento,
+            token=secrets.token_urlsafe(48),
+            expires_at=agendamento.data_hora_inicio,
+        )
+
+    @staticmethod
+    def validar_token(token_str):
+        """Retorna instância se válido (não usado e não expirado), None caso contrário."""
+        from apps.agendamentos.models import TokenConfirmacaoAgendamento
+
+        try:
+            token_obj = TokenConfirmacaoAgendamento.objects.select_related(
+                "agendamento__cliente",
+                "agendamento__profissional",
+                "agendamento__servico",
+            ).get(token=token_str)
+        except TokenConfirmacaoAgendamento.DoesNotExist:
+            return None
+
+        agora = timezone.now()
+        if token_obj.usado_em is not None:
+            return token_obj  # já usado — retorna para mostrar página informativa
+        if token_obj.expires_at <= agora:
+            return token_obj  # expirado — retorna para mostrar página informativa
+        return token_obj
+
+    @staticmethod
+    def processar(token_obj, acao: str):
+        """
+        Transiciona status do agendamento (CONFIRMADO ou CANCELADO),
+        marca token como usado e invalida cache via signal existente.
+        """
+        from apps.agendamentos.models import Agendamento
+
+        agendamento = token_obj.agendamento
+        agendamento.status = acao
+        agendamento.save()  # dispara post_save signal → invalida cache
+
+        token_obj.usado_em = timezone.now()
+        token_obj.acao = acao
+        token_obj.save()
+
+        return agendamento

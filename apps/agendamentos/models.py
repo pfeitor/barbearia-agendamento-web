@@ -1,3 +1,5 @@
+import secrets
+
 from django.db import models
 from django.utils import timezone
 
@@ -32,3 +34,24 @@ class Agendamento(models.Model):
 
     def __str__(self):
         return f"{self.cliente} - {self.servico} - {self.data_hora_inicio}"
+
+
+class TokenConfirmacaoAgendamento(models.Model):
+    agendamento = models.OneToOneField(
+        Agendamento, on_delete=models.CASCADE, related_name="token_confirmacao"
+    )
+    token = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField()
+    usado_em = models.DateTimeField(null=True, blank=True)
+    acao = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        choices=[("CONFIRMADO", "Confirmado"), ("CANCELADO", "Cancelado")],
+    )
+
+    class Meta:
+        db_table = "token_confirmacao_agendamento"
+
+    def __str__(self):
+        return f"Token agendamento #{self.agendamento_id} — {self.acao or 'pendente'}"

@@ -1,13 +1,14 @@
 from django.contrib import messages
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
+from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DeleteView, ListView
-from django.http import JsonResponse
+from django.http import HttpResponseBadRequest, JsonResponse
 from django.views.decorators.http import require_GET, require_POST
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from .forms import AgendamentoForm
 from .models import Agendamento
-from .services import AvailabilityService
+from .services import AvailabilityService, ConfirmacaoLinkService
 from apps.core.mixins import AdminRequiredMixin, AdminOrClienteMixin, ClienteRequiredMixin
 from apps.clientes.models import Cliente
 from apps.profissionais.models import Profissional
@@ -121,6 +122,49 @@ class AgendamentoConcluirView(AdminRequiredMixin, View):
         agendamento.save()
         messages.success(request, f'Agendamento #{pk} concluído com sucesso.')
         return redirect('agendamentos_lista')
+
+
+class ResponderConfirmacaoView(View):
+    """View pública (sem login). Exibe detalhes do agendamento e processa ação."""
+
+    _TEMPLATE = "agendamentos/responder_confirmacao.html"
+
+    def get(self, request, token):
+        token_obj = ConfirmacaoLinkService.validar_token(token)
+        if token_obj is None:
+            return render(request, self._TEMPLATE, {"token_obj": None, "estado": "invalido"})
+
+        agora = timezone.now()
+        if token_obj.usado_em is not None:
+            estado = "usado"
+        elif token_obj.expires_at <= agora:
+            estado = "expirado"
+        else:
+            estado = "valido"
+
+        return render(request, self._TEMPLATE, {"token_obj": token_obj, "estado": estado})
+
+    def post(self, request, token):
+        token_obj = ConfirmacaoLinkService.validar_token(token)
+
+        agora = timezone.now()
+        if token_obj is None or token_obj.usado_em is not None or token_obj.expires_at <= agora:
+            if token_obj is None:
+                estado = "invalido"
+            elif token_obj.usado_em:
+                estado = "usado"
+            else:
+                estado = "expirado"
+            return render(request, self._TEMPLATE, {"token_obj": token_obj, "estado": estado})
+
+        acao = request.POST.get("acao")
+        if acao not in ("CONFIRMADO", "CANCELADO"):
+            return HttpResponseBadRequest("Ação inválida.")
+
+        ConfirmacaoLinkService.processar(token_obj, acao)
+        msg = "Agendamento confirmado com sucesso!" if acao == "CONFIRMADO" else "Agendamento cancelado com sucesso!"
+        messages.success(request, msg)
+        return redirect(reverse("responder_confirmacao", kwargs={"token": token}))
 
 
 @require_POST

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Confirmação de Agendamento{% endblock %}
+
+{% block content %}
+<div style="max-width:540px;margin:48px auto;padding:0 16px;">
+
+  {% if estado == "invalido" %}
+    <div style="background:#fff;border-radius:8px;padding:40px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+      <div style="font-size:3rem;margin-bottom:16px;">🔗</div>
+      <h2 style="color:#333;margin:0 0 12px;">Link inválido</h2>
+      <p style="color:#666;line-height:1.6;">Este link de confirmação não existe ou foi digitado incorretamente. Verifique o e-mail recebido e tente novamente.</p>
+    </div>
+
+  {% elif estado == "expirado" %}
+    <div style="background:#fff;border-radius:8px;padding:40px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+      <div style="font-size:3rem;margin-bottom:16px;">⏰</div>
+      <h2 style="color:#333;margin:0 0 12px;">Agendamento já passou</h2>
+      <p style="color:#666;line-height:1.6;">
+        O link expirou pois o horário do agendamento
+        (<strong>{{ token_obj.agendamento.data_hora_inicio|date:"d/m/Y" }} às {{ token_obj.agendamento.data_hora_inicio|time:"H:i" }}</strong>)
+        já ocorreu. Para dúvidas, entre em contato com a barbearia.
+      </p>
+    </div>
+
+  {% elif estado == "usado" %}
+    <div style="background:#fff;border-radius:8px;padding:40px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+      {% if token_obj.acao == "CONFIRMADO" %}
+        <div style="font-size:3rem;margin-bottom:16px;">✅</div>
+        <h2 style="color:#2d6a4f;margin:0 0 12px;">Presença confirmada!</h2>
+        <p style="color:#666;line-height:1.6;">Você já confirmou presença neste agendamento. Até lá!</p>
+      {% else %}
+        <div style="font-size:3rem;margin-bottom:16px;">❌</div>
+        <h2 style="color:#c0392b;margin:0 0 12px;">Agendamento cancelado</h2>
+        <p style="color:#666;line-height:1.6;">Você já cancelou este agendamento. Para remarcar, entre em contato com a barbearia ou acesse o sistema.</p>
+      {% endif %}
+      <div style="background:#f8f8f8;border-radius:6px;padding:16px;margin-top:24px;text-align:left;font-size:.9rem;color:#555;">
+        <strong>{{ token_obj.agendamento.servico }}</strong><br>
+        {{ token_obj.agendamento.data_hora_inicio|date:"d/m/Y" }} às {{ token_obj.agendamento.data_hora_inicio|time:"H:i" }}
+        — {{ token_obj.agendamento.profissional.nome }}
+      </div>
+    </div>
+
+  {% elif estado == "valido" %}
+    {% with ag=token_obj.agendamento %}
+    <div style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+      <div style="background:#333;padding:24px;text-align:center;">
+        <h1 style="color:#fff;margin:0;font-size:1.3rem;">Confirmação de Agendamento</h1>
+      </div>
+      <div style="padding:32px;">
+
+        {% if messages %}
+          {% for message in messages %}
+            <div style="background:{% if message.tags == 'success' %}#d4edda{% else %}#f8d7da{% endif %};color:{% if message.tags == 'success' %}#155724{% else %}#721c24{% endif %};padding:12px 16px;border-radius:6px;margin-bottom:20px;">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <p style="color:#555;line-height:1.6;margin:0 0 24px;">
+          Olá, <strong>{{ ag.cliente.nome }}</strong>! Confirme ou cancele seu agendamento abaixo.
+        </p>
+
+        <div style="background:#f8f8f8;border-radius:8px;padding:20px;margin-bottom:28px;">
+          <table style="width:100%;border-collapse:collapse;font-size:.95rem;color:#333;">
+            <tr><td style="padding:6px 0;color:#888;width:40%;">Serviço</td><td style="padding:6px 0;font-weight:600;">{{ ag.servico.nome }}</td></tr>
+            <tr><td style="padding:6px 0;color:#888;">Profissional</td><td style="padding:6px 0;font-weight:600;">{{ ag.profissional.nome }}</td></tr>
+            <tr><td style="padding:6px 0;color:#888;">Data</td><td style="padding:6px 0;font-weight:600;">{{ ag.data_hora_inicio|date:"d/m/Y" }}</td></tr>
+            <tr><td style="padding:6px 0;color:#888;">Horário</td><td style="padding:6px 0;font-weight:600;">{{ ag.data_hora_inicio|time:"H:i" }}</td></tr>
+          </table>
+        </div>
+
+        <form method="post" style="display:flex;gap:12px;flex-wrap:wrap;">
+          {% csrf_token %}
+          <button type="submit" name="acao" value="CONFIRMADO"
+                  style="flex:1;min-width:140px;padding:14px 24px;background:#2d6a4f;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:1rem;cursor:pointer;">
+            ✅ Confirmar presença
+          </button>
+          <button type="submit" name="acao" value="CANCELADO"
+                  style="flex:1;min-width:140px;padding:14px 24px;background:#c0392b;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:1rem;cursor:pointer;"
+                  onclick="return confirm('Tem certeza que deseja cancelar este agendamento?')">
+            ❌ Cancelar agendamento
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endwith %}
+  {% endif %}
+
+</div>
+{% endblock %}

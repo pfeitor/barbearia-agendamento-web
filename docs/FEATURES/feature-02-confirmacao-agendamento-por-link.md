@@ -205,18 +205,48 @@ LEMBRETE_DIAS_ANTECEDENCIA = [
 
 ## ✅ Critérios de Aceite
 
-- [ ] `TokenConfirmacaoAgendamento` criado via migração; `db_table = 'token_confirmacao_agendamento'`.
-- [ ] `manage.py enviar_lembretes` itera sobre `LEMBRETE_DIAS_ANTECEDENCIA` e envia e-mail para cada intervalo com agendamentos `AGENDADO` (verificar no console em dev).
-- [ ] Agendamento com status `CONFIRMADO` ou `CANCELADO` não recebe novo lembrete.
-- [ ] O mesmo token é reutilizado em lembretes subsequentes do mesmo agendamento.
-- [ ] GET `/agendamentos/responder/<token>/` exibe dados corretos do agendamento.
-- [ ] POST com `acao=CONFIRMADO` transiciona status `AGENDADO → CONFIRMADO` e marca token usado.
-- [ ] POST com `acao=CANCELADO` transiciona status para `CANCELADO` e marca token usado.
-- [ ] Token expirado ou já usado renderiza página informativa sem erro 500.
-- [ ] `NotificacaoLog` registra entrada `LEMBRETE_COM_LINK` para cada envio.
-- [ ] Cache de disponibilidade invalidado via signal existente após qualquer transição de status.
-- [ ] View `ResponderConfirmacaoView` não requer login (acessível sem sessão ativa).
-- [ ] `.env.example` e `ARCHITECTURE.md` atualizados com `SITE_URL`, `LEMBRETE_DIAS_ANTECEDENCIA` e novo fluxo.
+- [x] `TokenConfirmacaoAgendamento` criado via migração; `db_table = 'token_confirmacao_agendamento'`.
+- [x] `manage.py enviar_lembretes` itera sobre `LEMBRETE_DIAS_ANTECEDENCIA` e envia e-mail para cada intervalo com agendamentos `AGENDADO` (verificar no console em dev).
+- [x] Agendamento com status `CONFIRMADO` ou `CANCELADO` não recebe novo lembrete.
+- [x] O mesmo token é reutilizado em lembretes subsequentes do mesmo agendamento.
+- [x] GET `/agendamentos/responder/<token>/` exibe dados corretos do agendamento.
+- [x] POST com `acao=CONFIRMADO` transiciona status `AGENDADO → CONFIRMADO` e marca token usado.
+- [x] POST com `acao=CANCELADO` transiciona status para `CANCELADO` e marca token usado.
+- [x] Token expirado ou já usado renderiza página informativa sem erro 500.
+- [x] `NotificacaoLog` registra entrada `LEMBRETE_COM_LINK` para cada envio.
+- [x] Cache de disponibilidade invalidado via signal existente após qualquer transição de status.
+- [x] View `ResponderConfirmacaoView` não requer login (acessível sem sessão ativa).
+- [x] `.env.example` e `ARCHITECTURE.md` atualizados com `SITE_URL`, `LEMBRETE_DIAS_ANTECEDENCIA` e novo fluxo.
+
+---
+
+## 📦 Resumo de Implementação
+
+**Status:** Implementado em 02/05/2026. `python manage.py check` — 0 erros. Migration `0003_token_confirmacao_agendamento` aplicada.
+
+### Arquivos criados/modificados
+
+| Ação | Arquivo |
+|---|---|
+| Criado | `apps/agendamentos/migrations/0003_token_confirmacao_agendamento.py` |
+| Modificado | `apps/agendamentos/models.py` — `TokenConfirmacaoAgendamento` adicionado |
+| Modificado | `apps/agendamentos/services.py` — `ConfirmacaoLinkService` adicionado (`obter_ou_criar_token`, `validar_token`, `processar`) |
+| Modificado | `apps/agendamentos/views.py` — `ResponderConfirmacaoView` adicionada; imports `render`, `HttpResponseBadRequest`, `reverse`, `timezone` |
+| Modificado | `apps/agendamentos/urls.py` — rota `responder/<str:token>/` → `responder_confirmacao` |
+| Modificado | `apps/notificacoes/models.py` — `LEMBRETE_COM_LINK` adicionado ao `NotificacaoLog.Tipo` |
+| Modificado | `apps/notificacoes/services.py` — `enviar_lembrete_com_link()` adicionado |
+| Modificado | `apps/notificacoes/management/commands/enviar_lembretes.py` — reescrito para iterar por `LEMBRETE_DIAS_ANTECEDENCIA`, usar `ConfirmacaoLinkService` e `SITE_URL` |
+| Modificado | `config/settings/base.py` — `SITE_URL` e `LEMBRETE_DIAS_ANTECEDENCIA` adicionados |
+| Criado | `templates/notificacoes/email_lembrete_com_link.html` |
+| Criado | `templates/agendamentos/responder_confirmacao.html` |
+| Modificado | `.env.example` — `SITE_URL` e `LEMBRETE_DIAS_ANTECEDENCIA` documentados |
+| Modificado | `ARCHITECTURE.md` — fluxo de lembrete, variáveis de ambiente e model da feature-02 atualizados |
+
+### Decisões de implementação
+
+- **`validar_token` sempre retorna a instância** (mesmo quando expirada ou usada) para que a view possa exibir a mensagem de estado correta. `None` é retornado apenas quando o token não existe no banco.
+- **Redirect-after-POST** na `ResponderConfirmacaoView`: após processar a ação, redireciona para o GET da mesma URL; o GET encontra o token já marcado como usado e exibe a tela de confirmação/cancelamento — sem reenvio de formulário em F5.
+- **`SITE_URL` com default `http://127.0.0.1:8000`** em settings: não exige variável de ambiente em dev, mas obriga configuração explícita em produção.
 
 ---
 

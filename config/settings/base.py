@@ -137,3 +137,9 @@ EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
 BARBEARIA_NOME = config("BARBEARIA_NOME", default="Barbearia")
+
+# ─── Feature 02: confirmação de agendamento por link ──────────────────────────
+SITE_URL = config("SITE_URL", default="http://127.0.0.1:8000")
+LEMBRETE_DIAS_ANTECEDENCIA = [
+    int(d) for d in config("LEMBRETE_DIAS_ANTECEDENCIA", default="3,1,0").split(",")
+]

@@ -79,10 +79,18 @@ Admin → POST /agendamentos/<pk>/concluir/ → AgendamentoConcluirView (AdminRe
 → Agendamento.status = CONCLUIDO → post_save signal → invalida cache de disponibilidade
 ```
 
-### Fluxo de Lembrete (Cron)
+### Fluxo de Lembrete com Link (Cron — feature-02)
 ```
 Render cron (11:00 UTC diário) → manage.py enviar_lembretes
-→ NotificacaoService.enviar_lembrete_dia() → Gmail SMTP → NotificacaoLog
+→ para cada intervalo em LEMBRETE_DIAS_ANTECEDENCIA (padrão: [3, 1, 0]):
+    → filtra Agendamento com status=AGENDADO na data hoje+N
+    → ConfirmacaoLinkService.obter_ou_criar_token(agendamento) → TokenConfirmacaoAgendamento
+    → NotificacaoService.enviar_lembrete_com_link() → Gmail SMTP → NotificacaoLog (LEMBRETE_COM_LINK)
+
+Cliente clica no link do e-mail
+→ GET /agendamentos/responder/<token>/ → ResponderConfirmacaoView (pública)
+→ POST com acao=CONFIRMADO|CANCELADO → ConfirmacaoLinkService.processar()
+    → Agendamento.status = acao → post_save signal → invalida cache de disponibilidade
 ```
 
 ---
@@ -103,6 +111,12 @@ Render cron (11:00 UTC diário) → manage.py enviar_lembretes
 | Form | `*/forms.py` | Validação de entrada do usuário |
 | Signal | `agendamentos/signals.py` | Efeitos colaterais desacoplados (cache, notificações) |
 | Mixin | `core/mixins.py` | Controle de acesso reutilizável por CBV |
+
+### Novos Models (feature-02)
+
+| Model | App | Descrição |
+|---|---|---|
+| `TokenConfirmacaoAgendamento` | `agendamentos` | Token URL-safe (64 chars), OneToOne com Agendamento, expira em `data_hora_inicio`, registra `acao` ao ser usado |
 
 ### Novos Models (feature-01)
 
@@ -181,6 +195,8 @@ POST /clientes/resetar-senha/<uidb64>/<token>/ → ResetarSenhaView
 | `BARBEARIA_NOME` | Nome exibido nos e-mails |
 | `DJANGO_SUPERUSER_*` | Criação automática de superuser via `bootstrap` |
 | `PASSWORD_RESET_TIMEOUT` | TTL do token de reset de senha em segundos (padrão: `3600`) |
+| `SITE_URL` | URL base para links em e-mails enviados fora de requests HTTP (ex: `https://barbearia-agendamento-web.onrender.com`) |
+| `LEMBRETE_DIAS_ANTECEDENCIA` | Intervalos de lembrete em dias separados por vírgula (padrão: `3,1,0`) |
 
 ### Deploy (Render.com — `render.yaml`)
 
