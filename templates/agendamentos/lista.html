@@ -115,6 +115,12 @@
                                         Confirmar
                                     </button>
                                 </form>
+                                <form method="post" action="{% url 'concluir_agendamento' agendamento.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-secondary">
+                                        Concluir
+                                    </button>
+                                </form>
                                 <form method="post" action="{% url 'cancelar_agendamento' agendamento.id %}" style="display: inline;">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-danger">
@@ -122,6 +128,12 @@
                                     </button>
                                 </form>
                             {% elif agendamento.status == 'CONFIRMADO' %}
+                                <form method="post" action="{% url 'concluir_agendamento' agendamento.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-secondary">
+                                        Concluir
+                                    </button>
+                                </form>
                                 <form method="post" action="{% url 'cancelar_agendamento' agendamento.id %}" style="display: inline;">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-danger">
