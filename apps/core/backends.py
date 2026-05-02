@@ -1,5 +1,6 @@
 from django.contrib.auth.backends import BaseBackend
 from django.contrib.auth import get_user_model
+from django.db import DatabaseError
 
 
 class AdminEmailBackend(BaseBackend):
@@ -24,5 +25,5 @@ class AdminEmailBackend(BaseBackend):
         UserModel = get_user_model()
         try:
             return UserModel.objects.get(pk=user_id)
-        except UserModel.DoesNotExist:
+        except (UserModel.DoesNotExist, DatabaseError):
             return None
