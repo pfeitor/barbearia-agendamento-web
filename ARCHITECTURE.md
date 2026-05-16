@@ -28,7 +28,7 @@ barbearia-agendamento-web/
 │   ├── profissionais/  # CRUD de profissionais + grade de horários
 │   ├── servicos/       # CRUD de serviços (nome, duração, preço)
 │   ├── agendamentos/   # Lógica principal: slots, reservas, cancelamento
-│   └── notificacoes/   # Envio de e-mails e log de notificações
+│   └── notificacoes/   # Envio de e-mails, providers e log de notificações
 ├── config/
 │   ├── settings/
 │   │   ├── base.py     # Configurações compartilhadas
@@ -85,7 +85,7 @@ Render cron (11:00 UTC diário) → manage.py enviar_lembretes
 → para cada intervalo em LEMBRETE_DIAS_ANTECEDENCIA (padrão: [3, 1, 0]):
     → filtra Agendamento com status=AGENDADO na data hoje+N
     → ConfirmacaoLinkService.obter_ou_criar_token(agendamento) → TokenConfirmacaoAgendamento
-    → NotificacaoService.enviar_lembrete_com_link() → Gmail SMTP → NotificacaoLog (LEMBRETE_COM_LINK)
+    → NotificacaoService.enviar_lembrete_com_link() → EmailProvider (Brevo ou SMTP) → NotificacaoLog (LEMBRETE_COM_LINK)
 
 Cliente clica no link do e-mail
 → GET /agendamentos/responder/<token>/ → ResponderConfirmacaoView (pública)
@@ -107,7 +107,8 @@ Cliente clica no link do e-mail
 | View | `*/views.py` | Orquestração de request/response, autenticação |
 | Service | `agendamentos/services.py` | Lógica de slots e disponibilidade |
 | Service | `clientes/services.py` | `AuthService`: verificação de e-mail e reset de senha |
-| Service | `notificacoes/services.py` | Envio de e-mails (confirmação, lembrete, verificação, reset) |
+| Service | `notificacoes/services.py` | Orquestra envio de e-mails (confirmação, lembrete, verificação, reset) |
+| Provider | `notificacoes/providers.py` | Transporte configurável por `EMAIL_PROVIDER`: Brevo API transacional ou SMTP Django |
 | Form | `*/forms.py` | Validação de entrada do usuário |
 | Signal | `agendamentos/signals.py` | Efeitos colaterais desacoplados (cache, notificações) |
 | Mixin | `core/mixins.py` | Controle de acesso reutilizável por CBV |
@@ -141,7 +142,7 @@ Cliente clica no link do e-mail
 POST /clientes/registrar/ → ClienteRegisterView
   → ClienteUser(is_active=False) + Cliente criados
   → AuthService.gerar_e_enviar_codigo() → VerificacaoEmail (expira 15min, limite 3/hora)
-  → NotificacaoService.enviar_email_verificacao() → Gmail SMTP
+  → NotificacaoService.enviar_email_verificacao() → EmailProvider (Brevo ou SMTP)
 
 POST /clientes/verificar/ → VerificarEmailView
   → AuthService.verificar_codigo() → ClienteUser.is_active=True → login automático
@@ -153,7 +154,7 @@ POST /clientes/verificar/ → VerificarEmailView
 POST /clientes/esqueci-senha/ → EsqueciSenhaView
   → AuthService.enviar_link_reset(cliente_user, request)
   → default_token_generator.make_token() (HMAC+timestamp, expira 1h via PASSWORD_RESET_TIMEOUT)
-  → NotificacaoService.enviar_email_reset_senha() → request.build_absolute_uri() → Gmail SMTP
+  → NotificacaoService.enviar_email_reset_senha() → request.build_absolute_uri() → EmailProvider (Brevo ou SMTP)
 
 POST /clientes/resetar-senha/<uidb64>/<token>/ → ResetarSenhaView
   → AuthService.validar_token_reset() → ClienteUser.set_password() → is_active=True
@@ -189,8 +190,13 @@ POST /clientes/resetar-senha/<uidb64>/<token>/ → ResetarSenhaView
 | `DATABASE_URL` | URL PostgreSQL (prod) ou SQLite (dev) |
 | `ALLOWED_HOSTS` | Ex: `.onrender.com,localhost` |
 | `TIME_ZONE` | Default: `America/Sao_Paulo` |
-| `EMAIL_HOST_USER` | Conta Gmail para envio |
-| `EMAIL_HOST_PASSWORD` | App Password Gmail |
+| `EMAIL_PROVIDER` | Provider ativo: `brevo` ou `smtp` |
+| `API_KEY_BREVO` | Chave da API Brevo, obrigatória em produção quando `EMAIL_PROVIDER=brevo` |
+| `BREVO_SENDER_NAME` | Nome do remetente validado na Brevo |
+| `BREVO_SENDER_EMAIL` | E-mail remetente validado na Brevo |
+| `BREVO_TIMEOUT` | Timeout HTTP para chamadas Brevo, em segundos |
+| `SMTP_EMAIL_HOST_USER` | Conta SMTP para envio quando `EMAIL_PROVIDER=smtp` |
+| `SMTP_EMAIL_HOST_PASSWORD` | Senha/app password SMTP quando `EMAIL_PROVIDER=smtp` |
 | `DEFAULT_FROM_EMAIL` | Endereço remetente |
 | `BARBEARIA_NOME` | Nome exibido nos e-mails |
 | `DJANGO_SUPERUSER_*` | Criação automática de superuser via `bootstrap` |

@@ -50,7 +50,7 @@ O sistema foi projetado para:
 ### ✉️ Sistema de Notificações por E-mail
 - **Confirmação de agendamento** — enviada automaticamente ao cliente quando um novo agendamento é criado (status `AGENDADO`)
 - **Lembrete com link de ação** — enviado nos dias D-3, D-1 e D-0 (configurável) para agendamentos pendentes; o cliente confirma ou cancela com um clique, sem precisar fazer login
-- Canal: **Gmail SMTP** (gratuito, nativo ao Django)
+- Canal configurável por ambiente: **Brevo API transacional** (`EMAIL_PROVIDER=brevo`) ou **SMTP** (`EMAIL_PROVIDER=smtp`)
 - Todos os envios são registrados em `NotificacaoLog` (visível no painel admin)
 - Lembrete diário executado por Cron Job no Render (zero custo adicional)
 
@@ -103,6 +103,7 @@ O sistema foi projetado para:
 │   └── notificacoes/   # Notificações por e-mail
 │       ├── models.py           # NotificacaoLog
 │       ├── services.py         # NotificacaoService
+│       ├── providers.py        # Brevo API / SMTP
 │       ├── admin.py            # Painel de logs
 │       └── management/
 │           └── commands/
@@ -191,11 +192,23 @@ ALLOWED_HOSTS=127.0.0.1,localhost
 DATABASE_URL=sqlite:///db.sqlite3
 TIME_ZONE=America/Sao_Paulo
 
-# Notificações por E-mail (Gmail SMTP)
-EMAIL_HOST_USER=seuemail@gmail.com
-EMAIL_HOST_PASSWORD=xxxx-xxxx-xxxx-xxxx  # App Password do Google
-DEFAULT_FROM_EMAIL=seuemail@gmail.com
+# Notificações por E-mail
+EMAIL_PROVIDER=brevo
+DEFAULT_FROM_EMAIL=Minha Barbearia <noreply@seudominio.com>
 BARBEARIA_NOME=Minha Barbearia
+
+# Brevo API transacional (EMAIL_PROVIDER=brevo)
+API_KEY_BREVO=xkeysib-placeholder
+BREVO_SENDER_NAME=Minha Barbearia
+BREVO_SENDER_EMAIL=noreply@seudominio.com
+BREVO_TIMEOUT=10
+
+# SMTP alternativo (EMAIL_PROVIDER=smtp)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=465
+EMAIL_USE_SSL=True
+SMTP_EMAIL_HOST_USER=seuemail@gmail.com
+SMTP_EMAIL_HOST_PASSWORD=xxxx-xxxx-xxxx-xxxx  # App Password do Google
 
 # Links nos e-mails de lembrete
 SITE_URL=http://127.0.0.1:8000
@@ -206,7 +219,7 @@ DJANGO_SUPERUSER_EMAIL=admin@example.com
 DJANGO_SUPERUSER_PASSWORD=SenhaSegura123
 ```
 
-> 💡 Em desenvolvimento, os e-mails são exibidos no terminal (sem precisar de Gmail real). Apenas em produção o SMTP é utilizado.
+> 💡 Em desenvolvimento, se `EMAIL_PROVIDER=brevo` estiver sem `API_KEY_BREVO` ou se o SMTP estiver sem senha, os e-mails são exibidos no terminal.
 
 ---
 
@@ -277,11 +290,18 @@ Retorna:
 3. A view pública `/agendamentos/responder/<token>/` processa a ação e transiciona o status
 4. Agendamentos já `CONFIRMADO` ou `CANCELADO` saem do filtro e não recebem novos lembretes
 
-### Configurar Gmail SMTP
+### Configurar Brevo API
+
+1. Crie uma API key transacional na Brevo.
+2. Valide o remetente/domínio na Brevo.
+3. Configure `EMAIL_PROVIDER=brevo`, `API_KEY_BREVO`, `BREVO_SENDER_NAME`, `BREVO_SENDER_EMAIL` e `DEFAULT_FROM_EMAIL`.
+4. Em produção, a aplicação falha na inicialização se `EMAIL_PROVIDER=brevo` estiver sem chave ou remetente.
+
+### Configurar Gmail SMTP alternativo
 
 1. Ative o **2FA** na sua conta Google: [myaccount.google.com/security](https://myaccount.google.com/security)
 2. Gere uma **App Password** em: [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
-3. Preencha as variáveis `EMAIL_HOST_USER` e `EMAIL_HOST_PASSWORD` no `.env`
+3. Configure `EMAIL_PROVIDER=smtp`, `SMTP_EMAIL_HOST_USER` e `SMTP_EMAIL_HOST_PASSWORD` no `.env`
 
 ### Testar o lembrete manualmente
 
@@ -299,7 +319,7 @@ http://127.0.0.1:8000/admin/notificacoes/notificacaolog/
 
 ### Deploy (Render)
 
-O `render.yaml` já inclui um **Cron Job** configurado para rodar `python manage.py enviar_lembretes` diariamente às 08:00 BRT. Adicione as variáveis de e-mail no painel do Render para ativá-lo.
+O `render.yaml` já inclui um **Cron Job** configurado para rodar `python manage.py enviar_lembretes` diariamente às 08:00 BRT. No painel do Render, configure `EMAIL_PROVIDER=brevo`, `API_KEY_BREVO`, `BREVO_SENDER_NAME`, `BREVO_SENDER_EMAIL`, `DEFAULT_FROM_EMAIL` e `SITE_URL` para ativar os envios reais.
 
 ---
 

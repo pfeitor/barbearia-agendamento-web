@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import dj_database_url
 from decouple import config
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 SECRET_KEY = config("SECRET_KEY")
@@ -127,15 +128,53 @@ LOGGING = {
     },
 }
 
-# ─── E-mail (Gmail SMTP) ───────────────────────────────────────────────────────
+# E-mail transacional
+EMAIL_PROVIDER = config("EMAIL_PROVIDER", default="smtp").strip().lower()
+if EMAIL_PROVIDER not in {"smtp", "brevo"}:
+    raise ImproperlyConfigured("EMAIL_PROVIDER deve ser 'smtp' ou 'brevo'.")
+
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 465
-EMAIL_USE_SSL = True
-EMAIL_TIMEOUT = 10  # evita worker timeout do Gunicorn por conexão SMTP travada
-EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
+EMAIL_PORT = config("EMAIL_PORT", default=465, cast=int)
+EMAIL_USE_SSL = config("EMAIL_USE_SSL", default=True, cast=bool)
+EMAIL_TIMEOUT = config("EMAIL_TIMEOUT", default=10, cast=int)
+
+# Fallback temporario para nao quebrar ambientes ainda usando os nomes antigos.
+EMAIL_HOST_USER = config(
+    "SMTP_EMAIL_HOST_USER",
+    default=config("EMAIL_HOST_USER", default=""),
+)
+EMAIL_HOST_PASSWORD = config(
+    "SMTP_EMAIL_HOST_PASSWORD",
+    default=config("EMAIL_HOST_PASSWORD", default=""),
+)
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
+
+API_KEY_BREVO = config("API_KEY_BREVO", default="")
+BREVO_SENDER_NAME = config("BREVO_SENDER_NAME", default="")
+BREVO_SENDER_EMAIL = config("BREVO_SENDER_EMAIL", default="")
+BREVO_TIMEOUT = config("BREVO_TIMEOUT", default=10, cast=int)
+
+IS_PRODUCTION_SETTINGS = os.getenv("DJANGO_SETTINGS_MODULE", "").endswith(".prod")
+IS_RENDER_RUNTIME = os.getenv("RENDER_SERVICE_TYPE") == "web" and not os.getenv("RENDER_BUILD_ID")
+
+if EMAIL_PROVIDER == "brevo" and (IS_PRODUCTION_SETTINGS or IS_RENDER_RUNTIME):
+    missing_brevo = [
+        name
+        for name, value in {
+            "API_KEY_BREVO": API_KEY_BREVO,
+            "BREVO_SENDER_NAME": BREVO_SENDER_NAME,
+            "BREVO_SENDER_EMAIL": BREVO_SENDER_EMAIL,
+        }.items()
+        if not value
+    ]
+    if missing_brevo:
+        raise ImproperlyConfigured(
+            "EMAIL_PROVIDER=brevo requer as variaveis: "
+            + ", ".join(missing_brevo)
+            + "."
+        )
+
 BARBEARIA_NOME = config("BARBEARIA_NOME", default="Barbearia")
 
 # ─── Feature 02: confirmação de agendamento por link ──────────────────────────

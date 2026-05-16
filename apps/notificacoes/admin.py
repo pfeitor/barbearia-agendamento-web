@@ -9,16 +9,19 @@ class NotificacaoLogAdmin(admin.ModelAdmin):
         "tipo",
         "destinatario",
         "status",
+        "provider",
         "enviado_em",
     )
-    list_filter = ("tipo", "status", "enviado_em")
-    search_fields = ("destinatario", "agendamento__cliente__nome")
+    list_filter = ("tipo", "status", "provider", "enviado_em")
+    search_fields = ("destinatario", "agendamento__cliente__nome", "provider_message_id")
     readonly_fields = (
         "agendamento",
         "tipo",
         "destinatario",
         "status",
         "erro",
+        "provider",
+        "provider_message_id",
         "enviado_em",
     )
     ordering = ("-enviado_em",)

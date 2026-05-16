@@ -22,6 +22,8 @@ class NotificacaoLog(models.Model):
     destinatario = models.EmailField()
     status = models.CharField(max_length=10, choices=Status.choices)
     erro = models.TextField(blank=True, default="")
+    provider = models.CharField(max_length=30, blank=True, default="")
+    provider_message_id = models.CharField(max_length=255, blank=True, default="")
     enviado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
