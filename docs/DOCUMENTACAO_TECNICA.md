@@ -6,7 +6,8 @@
 **Objetivo:** sistema web para agendamento online em barbearias, com autenticação de clientes, painel administrativo, cálculo de disponibilidade e notificações transacionais por e-mail.  
 **Arquitetura:** monolito Django seguindo o padrão MVT (Model-View-Template), organizado em apps por domínio.  
 **Banco de dados:** PostgreSQL em produção, atualmente migrado para Neon, configurado por `DATABASE_URL`. SQLite continua disponível como fallback local quando `DATABASE_URL` não estiver definido.  
-**Deploy:** Render, com Web Service e Cron Job para lembretes.
+**Deploy:** Render, com Web Service e Cron Job para lembretes.  
+**URL de produção:** https://barbearia-agendamento-web.onrender.com/
 
 O sistema atende dois perfis principais:
 
@@ -538,6 +539,12 @@ Valores como `release` não são válidos.
 ---
 
 ## 10. Deploy no Render
+
+URL pública:
+
+```text
+https://barbearia-agendamento-web.onrender.com/
+```
 
 ### Web Service
 

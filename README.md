@@ -2,6 +2,8 @@
 
 Sistema web de agendamento online para barbearias, desenvolvido com Django.
 
+Produção: https://barbearia-agendamento-web.onrender.com/
+
 ## Sobre
 
 O **PI Barbearia** permite gerenciar clientes, profissionais, serviços, horários de atendimento e agendamentos. O sistema possui autenticação por e-mail/senha, cálculo automático de disponibilidade, confirmação/cancelamento por link e envio de e-mails transacionais.
@@ -344,6 +346,12 @@ Validações recentes:
 ## Deploy
 
 O deploy é feito no Render.
+
+URL pública de produção:
+
+```text
+https://barbearia-agendamento-web.onrender.com/
+```
 
 ### Web Service
 

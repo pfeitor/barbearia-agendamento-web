@@ -19,6 +19,8 @@ Características principais:
 - deploy no Render;
 - PostgreSQL gerenciado na Neon.
 
+URL pública de produção: https://barbearia-agendamento-web.onrender.com/
+
 ## 2. Decisões Arquiteturais
 
 | Decisão | Motivo |
@@ -243,6 +245,12 @@ Hospeda:
 
 - Web Service Django/Gunicorn;
 - Cron Job de lembretes.
+
+URL pública do Web Service:
+
+```text
+https://barbearia-agendamento-web.onrender.com/
+```
 
 O Cron Job precisa das mesmas variáveis relevantes de banco, e-mail e `SITE_URL` do Web Service.
 
