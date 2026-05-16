@@ -2,7 +2,7 @@
 
 ## Status da implementacao
 
-**Status:** implementacao tecnica concluida em ambiente local.
+**Status:** implementacao tecnica concluida e validada localmente com Brevo.
 
 **Data de atualizacao:** 2026-05-16.
 
@@ -30,8 +30,10 @@ Resultados:
 - `manage.py check`: OK.
 - `apps.notificacoes.tests`: 5 testes OK.
 - `makemigrations --check --dry-run`: sem mudancas pendentes.
+- Import do SDK `sib_api_v3_sdk`: OK apos instalar dependencias na `.venv`.
+- Smoke local de reset de senha com `EMAIL_PROVIDER=brevo`: OK.
 
-Observacao local: o `.env` atual nao foi alterado. Para validar os comandos foi necessario sobrescrever `DEBUG=True` no processo, pois o `.env` local contem `DEBUG=release`, valor que `python-decouple` nao aceita como booleano.
+Observacao local: durante o primeiro teste real, o envio falhou com `No module named 'sib_api_v3_sdk'` porque a dependencia ainda nao estava instalada na `.venv`. A instalacao via `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` corrigiu o ambiente local.
 
 **Pendencias fora do ambiente local:**
 
@@ -264,7 +266,8 @@ Nenhuma view, formulario ou regra de negocio deve passar a conhecer diretamente 
 
 - [ ] Teste do management command com provider mockado.
 - [ ] Teste de `enviar_lembretes` verificando quantidade de chamadas ao provider.
-- [ ] Teste de reset de senha com mock, validando que o link aparece no HTML/texto.
+- [x] Smoke local de reset de senha com provider Brevo.
+- [ ] Teste automatizado de reset de senha com mock, validando que o link aparece no HTML/texto.
 - [ ] Teste de verificacao de e-mail com mock, validando codigo no corpo.
 
 ## Fase 5: Observabilidade, seguranca e deploy
@@ -288,7 +291,8 @@ Nenhuma view, formulario ou regra de negocio deve passar a conhecer diretamente 
 ### Testes
 
 - [ ] Smoke manual: criar agendamento e conferir e-mail recebido.
-- [ ] Smoke manual: acionar "esqueci minha senha" e conferir link recebido.
+- [x] Smoke local: acionar "esqueci minha senha" com Brevo configurado.
+- [ ] Smoke em producao: acionar "esqueci minha senha" e conferir link recebido.
 - [ ] Smoke manual: executar `python manage.py enviar_lembretes` com um agendamento de teste.
 - [ ] Verificacao manual no painel Brevo: confirmar evento de envio/entrega quando disponivel.
 
@@ -319,5 +323,6 @@ Nenhuma view, formulario ou regra de negocio deve passar a conhecer diretamente 
 - [x] `NotificacaoService` integrado ao provider.
 - [x] Testes unitarios cobrindo sucesso e falha.
 - [ ] Management command testado com mock.
-- [ ] Smoke real executado em ambiente controlado.
+- [x] Smoke local de reset de senha executado em ambiente controlado.
+- [ ] Smoke real completo executado em producao/Render.
 - [x] README/arquitetura atualizados.

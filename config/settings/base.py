@@ -9,6 +9,8 @@ SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
 ALLOWED_HOSTS = [host.strip() for host in os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if host.strip()]
 TIME_ZONE = os.getenv("TIME_ZONE", "America/Sao_Paulo")
+IS_PRODUCTION_SETTINGS = os.getenv("DJANGO_SETTINGS_MODULE", "").endswith(".prod")
+IS_RENDER_RUNTIME = os.getenv("RENDER_SERVICE_TYPE") == "web" and not os.getenv("RENDER_BUILD_ID")
 
 # Deve ser declarado antes de qualquer model que referencie o usuário
 AUTH_USER_MODEL = 'clientes.ClienteUser'
@@ -58,14 +60,25 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-# Usar SQLite durante build, PostgreSQL em produção
-if os.getenv("RENDER_SERVICE_TYPE") == "web" and not os.getenv("RENDER_BUILD_ID"):
+# Usar SQLite durante build do Render. Fora disso, DATABASE_URL tem prioridade.
+DATABASE_URL = config("DATABASE_URL", default="")
+if os.getenv("RENDER_BUILD_ID"):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+elif DATABASE_URL:
     DATABASES = {
         "default": dj_database_url.config(
-            default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+            default=DATABASE_URL,
             conn_max_age=600,
-            ssl_require=True,
-            engine='django.db.backends.postgresql',
+            ssl_require=config(
+                "DATABASE_SSL_REQUIRE",
+                default=IS_PRODUCTION_SETTINGS or IS_RENDER_RUNTIME,
+                cast=bool,
+            ),
         )
     }
 else:
@@ -154,9 +167,6 @@ API_KEY_BREVO = config("API_KEY_BREVO", default="")
 BREVO_SENDER_NAME = config("BREVO_SENDER_NAME", default="")
 BREVO_SENDER_EMAIL = config("BREVO_SENDER_EMAIL", default="")
 BREVO_TIMEOUT = config("BREVO_TIMEOUT", default=10, cast=int)
-
-IS_PRODUCTION_SETTINGS = os.getenv("DJANGO_SETTINGS_MODULE", "").endswith(".prod")
-IS_RENDER_RUNTIME = os.getenv("RENDER_SERVICE_TYPE") == "web" and not os.getenv("RENDER_BUILD_ID")
 
 if EMAIL_PROVIDER == "brevo" and (IS_PRODUCTION_SETTINGS or IS_RENDER_RUNTIME):
     missing_brevo = [
